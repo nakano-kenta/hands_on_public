@@ -9,7 +9,7 @@ module ShooterUtil
       diff = (scanned[:direction] - gun_heading) % 360
       diff -= 360 if diff > 180
       diff += 360 if diff < -180
-      if diff.abs < 45 and gun_heat == 0
+      if diff.abs <= 30 and gun_heat == 0
         @will_fire = true
         turn_gun diff
         break

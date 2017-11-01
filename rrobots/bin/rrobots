@@ -100,16 +100,19 @@ def setup_battlefield(options, robots)
   team_divider = (robots.size / teams.size.to_f).ceil
   robots.map! do |robot|
     begin
-      begin
-        require "./"+robot.downcase
-      rescue LoadError
-      end
-      begin
-        require "./"+robot
-      rescue LoadError
+    begin
+      require "./"+robot.downcase
+    rescue LoadError
     end
+    begin
+      require "./"+robot
+    rescue LoadError
+    end
+
     in_game_name = File.basename(robot).sub(/\..*$/, '')
-    in_game_name[0] = in_game_name[0,1].upcase
+    in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
+    p in_game_name
+    p Object.const_get(in_game_name)
     team = c / team_divider
     c += 1
     robotrunner = RobotRunner.new(Object.const_get(in_game_name).new, battlefield, team)
