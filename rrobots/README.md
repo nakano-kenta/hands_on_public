@@ -20,24 +20,26 @@ https://github.com/logankoester/rrobots
    Need to turn gun effectively.
 2. Win against Shooter
    Need move to avoid getting hit.
+3. Win against Shooter
+   Need move to avoid getting hit.
 
 ## Basic level
-3. Win against Wall
+4. Win against Wall
    Need to aim uniform speed liner moving targets.
-4. Win against Circle
+5. Win against Circle
    Need to aim uniform acceleration moving targets.
-5. Win against Swing
+6. Win against Swing
    Need to aim patterned moving targets.
 
 ## Advansed level
-6. Win against Wallshooter
-7. Win against Circleshooter
-8. Win against Swingshooter
+7. Win against Wallshooter
+8. Win against Circleshooter
+9. Win against Swingshooter
 
 ## Master
-9. T.B.D
+10. T.B.D
 
 
 
 ## 勝てるもんなら勝ってみろ！！
-99. Win against Kubota
+777. Win against Kubota
