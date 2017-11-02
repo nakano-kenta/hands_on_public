@@ -39,6 +39,12 @@ https://github.com/logankoester/rrobots
 ## Master(1500x1500)
 10. Win against Wallshooter, Circleshooter and Swingshooter
 
+## Master(700x700)
+50. Win against RandomShooter
+
+## Master(1500x1500)
+100. Win against RandomShooter
+
 
 
 ## 勝てるもんなら勝ってみろ！！

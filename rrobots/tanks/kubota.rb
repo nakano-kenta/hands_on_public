@@ -73,41 +73,41 @@ class Kubota
   MAX_SPEED = 8
   BULLET_SPPED = 30
   FIRE_POWR_RATIO = 3.3
-
+  SAFETY_DISTANCE = 300
   def debug(*msg)
     p *msg if @debug_mode
   end
 
   def draw_gun_heading
-    return unless @debug_mode
+    return unless @debug_mode and gui
     aiming_point = to_point gun_heading, 2000, position
     Gosu.draw_line(position[:x]/2,position[:y]/2,Gosu::Color.argb(0xff_ffffff),aiming_point[:x]/2,aiming_point[:y]/2,Gosu::Color.argb(0xff_ffffff),1)
   end
 
   def draw_anti_gravity_points
-    return unless @debug_mode
+    return unless @debug_mode and gui
     @anti_gravity_points.each do |p|
       Gosu.draw_rect(p[:point][:x]/2-5,p[:point][:y]/2-5,10,10,Gosu::Color.argb(0xff_ffffff), 2)
     end
   end
 
   def draw_aiming_point(point)
-    return unless @debug_mode
+    return unless @debug_mode and gui
     Gosu.draw_rect(point[:x]/2-10,point[:y]/2-10,20,20,Gosu::Color.argb(0xff_ffffff))
   end
 
   def draw_prospect_future(point)
-    return unless @debug_mode
+    return unless @debug_mode and gui
     Gosu.draw_rect(point[:x]/2-1,point[:y]/2-1,2,2,Gosu::Color.argb(0xff_ffff00), 2)
   end
 
   def draw_destination
-    return unless @debug_mode
+    return unless @debug_mode and gui
     Gosu.draw_rect(@destination[:x]/2-20,@destination[:y]/2-20,40,40,Gosu::Color.argb(0xff_00ff00))
   end
 
   def draw_bullets
-    return unless @debug_mode
+    return unless @debug_mode and gui
     @enemy_bullets.each do |bullet|
       red = Gosu::Color.argb(0xff_ff0000)
       delta = to_point(bullet[:heading], BULLET_SPPED*8)
@@ -132,7 +132,7 @@ class Kubota
   end
 
   def position
-    {x: x, y: y}
+    @position ||= {x: x, y: y}
   end
 
   def set_destination(point)
@@ -220,22 +220,19 @@ class Kubota
     if @status == :lockon
       delta = {x: 0, y: 0}
       center_direction = to_direction(position, {x: battlefield_width/2, y: battlefield_height/2})
-      side_angle = 90
-      side_angle = 110 if @lockon_target[:distance] > 500
-      side_angle = 70 if @lockon_target[:distance] < 300
-      left = @lockon_target[:direction] - side_angle
-      right = @lockon_target[:direction] + side_angle
-      if diff_direction(left, center_direction).abs < diff_direction(right, center_direction).abs
-        put_anti_gravity_point(0, to_point(right, 5, position), 100, 1, 1)
-      else
-        put_anti_gravity_point(0, to_point(left, 5, position), 100, 1, 1)
+      if @lockon_target[:distance] > SAFETY_DISTANCE
+        side_angle = 90
+        side_angle = 110 if @lockon_target[:distance] > 500
+        left = @lockon_target[:direction] - side_angle
+        right = @lockon_target[:direction] + side_angle
+        if diff_direction(left, center_direction).abs < diff_direction(right, center_direction).abs
+          put_anti_gravity_point(0, to_point(right, 5, position), 100, 1, 1)
+        else
+          put_anti_gravity_point(0, to_point(left, 5, position), 100, 1, 1)
+        end
       end
     end
     move_by_anti_gravity
-  end
-
-  def prospect_enemy(robot)
-
   end
 
   def decide_scan
@@ -369,6 +366,12 @@ class Kubota
 
   def fire_with_logging(n, robot)
     if @gun_heat == 0
+      if @energy < 10
+        if num_robots > 2 or !@lockon_target or @lockon_target[:energy] >= 0.3
+          return if @energy < 1
+        end
+        n = [n, @energy / 2].min
+      end
       fire n
       debug("Fire(#{n}) : #{robot[:aim_type]}")
       @bullets << {
@@ -550,10 +553,10 @@ class Kubota
     end
   end
 
-  def robot_scanned(event)
+  def robot_scanned(events)
     return if @robot_scanned_time == time
     @robot_scanned_time = time
-    event[1]&.each do |scanned|
+    events&.each do |scanned|
       point = to_point scanned[:direction], scanned[:distance], position
       @robots[scanned[:name]] ||= {
         name: scanned[:name],
@@ -614,8 +617,8 @@ class Kubota
     end
   end
 
-  def eval_enemy_bullet(event)
-    event[1]&.each do |scanned|
+  def eval_enemy_bullet(events)
+    events&.each do |scanned|
       robot = @robots[scanned[:name]]
       next unless robot[:acceleration]
       delta_energy = robot[:acceleration][:energy] + robot[:hit]
@@ -638,21 +641,49 @@ class Kubota
             aim_type: :direct
           }
 
-          delta = {x: 0, y: 0}
-          from_center = diff_point(position, {x: battlefield_width/2, y: battlefield_height/2})
-          if from_center[:x].abs > from_center[:y].abs
-            delta[:x] = 5 * ((from_center[:x] > 0) ? 1 : -1)
-          else
-            delta[:y] = 5 * ((from_center[:y] > 0) ? 1 : -1)
+          my_context = {
+            latest: time,
+            speed: @speed,
+            heading: @heading,
+            prospect_speed: @speed,
+            prospect_heading: @heading,
+            prospect_point: position,
+            acceleration: {
+              heading: @turn_angle,
+              speed: @acceleration
+            },
+            logs: [],
+          }
+          (robot[:distance] / BULLET_SPPED).to_i.times.each do
+            my_context = prospect_next_by_acceleration(my_context)
           end
-          put_anti_gravity_point(10, add_point(position, delta), 300, 1, 3)
+          bullet_heading = to_direction(bullet_start, my_context[:prospect_point])
+          @enemy_bullets << {
+            tick: robot[:latest],
+            start: bullet_start,
+            robot: robot,
+            point: to_point(bullet_heading, BULLET_SPPED*4, bullet_start),
+            heading: bullet_heading,
+            speed: BULLET_SPPED,
+            aim_type: :direct
+          }
+
+          if robot[:distance] > SAFETY_DISTANCE
+            if SecureRandom.random_number < 0.5
+              right = robot[:direction] + 90
+              put_anti_gravity_point(16, to_point(right, 40, position), 300, 1, 1)
+            else
+              left = robot[:direction] - 90
+              put_anti_gravity_point(16, to_point(left, 40, position), 300, 1, 1)
+            end
+          end
         end
       end
     end
   end
 
-  def hit(event)
-    event[1].each do |hit|
+  def hit(events)
+    events&.each do |hit|
       robot = @robots[hit[:to]]
       robot[:hit] = hit[:damage]
       bullet = @bullets.min do |a, b|
@@ -665,8 +696,8 @@ class Kubota
     end
   end
 
-  def got_hit(event)
-    # event[1].each do |hit|
+  def got_hit(events)
+    # events&.each do |hit|
     #   robot = @robots[hit[:from]]
     #   bullet = @enemy_bullets.min do |a, b|
     #     distance(a[:point], position) <=> distance(b[:point], position)
@@ -695,6 +726,7 @@ class Kubota
     if num_robots <= 2 and @lockon_target and (time - @lockon_target[:latest]) < 3
       set_lockon_mode
     else
+      @lockon_target = nil
       @patrol_tick = 0
       @status = :patrol
       @lockon_start = 0
@@ -727,14 +759,32 @@ class Kubota
     end
   end
 
-  def tick events
+  def initial
     @debug_mode = false
+    debug("gun: #{gun_heading}", "radar: #{radar_heading}")
+    @turn_angle = 0
+    @acceleration = 0
+    @prev_radar_heading = radar_heading
+    @robots = {}
+    @bullets = []
+    @enemy_bullets = []
+    @anti_gravity_points = []
+    @lockon_start = 0
+    set_patrol_mode
+  end
 
+  def initial_for_tick events
     @my_future_position = nil
     @acceleration = 0
     @turn_angle = 0
     @turn_gun_angle = 0
     @replay_point = nil
+    @position = nil
+  end
+
+  def tick events
+    initial if time == 0
+    initial_for_tick events
 
     if num_robots == 1
       @status = :win
@@ -744,42 +794,18 @@ class Kubota
       return
     end
 
-    if time < 1
-      debug("gun: #{gun_heading}", "radar: #{radar_heading}")
-      @turn_angle = 0
-      @acceleration = 0
-      @prev_radar_heading = radar_heading
-      @robots = {}
-      @bullets = []
-      @enemy_bullets = []
-      @anti_gravity_points = []
-      @lockon_start = 0
-      set_patrol_mode
-    end
-
-    events.each do |event|
-      robot_scanned(event) if event.first == 'robot_scanned'
-    end
-    robot_scanned([])
+    robot_scanned events['robot_scanned']
     move_bullets
     draw_gun_heading
     draw_bullets
-    events.each do |event|
-      hit(event) if event.first == 'hit'
-    end
-    events.each do |event|
-      got_hit(event) if event.first == 'got_hit'
-    end
-    events.each do |event|
-      eval_enemy_bullet(event) if event.first == 'robot_scanned'
-    end
-
+    hit events['hit']
+    got_hit events['got_hit']
+    eval_enemy_bullet events['robot_scanned']
     decide_move
     do_move
     decide_fire
     decide_scan
     @my_past_position = position
     draw_destination
-    # scan if time % 100 == 0
   end
 end

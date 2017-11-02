@@ -41,7 +41,7 @@ class RobotRunner
   attr_accessor :prev_y
   attr_accessor :prev_speed
 
-  def initialize robot, bf, team=0
+  def initialize robot, bf, team, options
     @robot = robot
     @battlefield = bf
     @team = team
@@ -162,7 +162,7 @@ class RobotRunner
     @battlefield.robots.each do |other|
       if (other != self) && (!other.dead)
         difference = Math.hypot(@y - other.y, other.x - @x)
-        if difference <= @size * 2
+        if difference <= @size * 2 and !@events['crash_into_enemy'].any?{|event| event[:with] == other.name}
           dx = Math::cos(@heading.to_rad) * @speed
           dy = -Math::sin(@heading.to_rad) * @speed
           other_dx = Math::cos(other.heading.to_rad) * other.speed
@@ -198,9 +198,11 @@ class RobotRunner
             other.ram_kills += 1
           end
           @events['crash_into_enemy'] << {
+            with: other.name,
             damage: damage
           }
           other.events['crash_into_enemy'] << {
+            with: name,
             damage: damage
           }
         end
@@ -276,7 +278,7 @@ class RobotRunner
   end
 
   def move
-    return if @energy <= 0.3
+    @speed = 0 if @energy <= 0.3
     @prev_speed = @speed
     @prev_x = @x
     @prev_y = @y

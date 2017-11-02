@@ -111,11 +111,15 @@ def setup_battlefield(options, robots)
 
     in_game_name = File.basename(robot).sub(/\..*$/, '')
     in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
-    p in_game_name
-    p Object.const_get(in_game_name)
     team = c / team_divider
     c += 1
-    robotrunner = RobotRunner.new(Object.const_get(in_game_name).new, battlefield, team)
+    robot = Object.const_get(in_game_name).new
+    if options.gui
+      robot.gui = true
+    else
+      robot.gui = false
+    end
+    robotrunner = RobotRunner.new(robot, battlefield, team, options)
     battlefield << robotrunner
     rescue Exception => error
       puts 'Error loading ' + robot + '!'
@@ -162,7 +166,7 @@ summaries = {}
     result = {
       win: (!robot.dead ? 1 : 0),
       name: robot.name,
-      score: (!robot.dead ? 1 : 0) * 500 + (robot.kills * 50) + robot.bullet_damage_given + (robot.ram_damage_given * 2) + (robot.ram_kills * 100),
+      score: (!robot.dead ? 1 : 0) * 300 + (robot.kills * 50) + (robot.bullet_damage_given + (robot.ram_damage_given * 2)) * 2 + (robot.ram_kills * 100),
       kills: robot.kills,
       damage_given: robot.damage_given,
       damage_taken: robot.damage_taken,

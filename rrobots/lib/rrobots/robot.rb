@@ -113,4 +113,5 @@ module Robot
   attr_event :broadcasts
 
   attr_state :num_robots
+  attr_state :gui
 end
