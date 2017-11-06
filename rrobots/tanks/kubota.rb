@@ -262,8 +262,10 @@ class Kubota
         @acceleration = -1
       end
 
-      if @status == :lockon
-        # TODO
+      if @status == :lockon and num_robots == 2
+        left_or_right (@heading + @turn_angle), @lockon_target[:direction] do |direction, diff|
+          @turn_angle = diff / 2
+        end
       end
 
       if on_the_wall? position, 50
@@ -287,9 +289,9 @@ class Kubota
   end
 
   def decide_move
-    if @status == :lockon
-      delta = {x: 0, y: 0}
-      target_direction = to_direction(position, @lockon_target[:prospect_point])
+    # if @status == :lockon
+    #   delta = {x: 0, y: 0}
+    #   target_direction = to_direction(position, @lockon_target[:prospect_point])
       # if @lockon_target[:distance] > SAFETY_DISTANCE
       #   side_angle = 90
       #   side_angle = 110 if @lockon_target[:distance] > 800
@@ -301,13 +303,19 @@ class Kubota
       #     put_anti_gravity_point(0, to_point(left, 5, position), SIDEPOS_AFFECT_DISTANCE, SIDEPOS_ALPHA, SIDEPOS_MULTI)
       #   end
       # end
+    # end
+    if @status == :ram_attack and (time - @ram_attack_start) > 80
+      target = @robots.values.max{|a, b| a[:latest] <=> b[:latest] }
+      set_destination(target[:prospect_point])
+    else
+      move_by_anti_gravity
     end
-    move_by_anti_gravity
   end
 
   def decide_scan
     towards_diff = diff_direction(radar_heading, @prev_radar_heading)
     set_patrol_mode if @status == :lockon and time - @lockon_start > 15
+
     if @status == :lockon
       target_direction = to_direction(position, @lockon_target[:prospect_point])
       radar_diff = diff_direction(target_direction, radar_heading + @turn_angle + @turn_gun_angle)
@@ -320,7 +328,8 @@ class Kubota
       end
       turn_radar radar_diff
     end
-    if @status == :patrol
+
+    if @status == :patrol or @status == :ram_attack
       if @patrol_tick % 8 <= 1
         turn_gun MAX_GUN_TURN
         turn_radar MAX_RADAR_TURN
@@ -441,7 +450,6 @@ class Kubota
         end
         n = [n, @energy / 2].min
       end
-      @lockon_start = time
       fire n
       debug("Fire(#{n}) : #{robot[:aim_type]}")
       @bullets << {
@@ -549,6 +557,7 @@ class Kubota
   end
 
   def decide_fire
+    return unless @status == :lockon
     if @lockon_target and (time - @lockon_start) > 4
       log_by_aim_type = {}
       @lockon_target[:hit_logs].reverse.first(10).each do |hit_log|
@@ -581,19 +590,6 @@ class Kubota
 
       if num_robots == 2
         power = [power, @lockon_target[:energy]/(FIRE_POWR_RATIO+0.01)].min
-        if @lockon_target[:energy] < 1 and energy > 8
-          delta = {x: 0, y: 0}
-          center_direction = to_direction(position, {x: battlefield_width/2, y: battlefield_height/2})
-          side_angle = 120
-          left = @lockon_target[:direction] - side_angle
-          right = @lockon_target[:direction] + side_angle
-          if diff_direction(left, center_direction).abs < diff_direction(right, center_direction).abs
-            put_anti_gravity_point(2, to_point(right, 5, position), RAM_AFFECT_DISTANCE, RAM_ALPHA, RAM_MULTI)
-          else
-            put_anti_gravity_point(2, to_point(left, 5, position), RAM_AFFECT_DISTANCE, RAM_ALPHA, RAM_MULTI)
-          end
-          return
-        end
       end
 
       if @lockon_target[:aim_type] == :pattern
@@ -774,20 +770,22 @@ class Kubota
   def got_hit(events)
     events&.each do |hit|
       robot = @robots[hit[:from]]
-      bullet = @enemy_bullets.min do |a, b|
-        distance(a[:point], position) <=> distance(b[:point], position)
+      bullets = @enemy_bullets.select do |bullet|
+        distance(bullet[:point], position) < @size * 1.1
       end
-      if bullet
+      bullets.each do |bullet|
         robot[:got_hit_logs] << bullet[:aim_type]
-        @enemy_bullets.reject!{|b| b == bullet}
       end
+      @enemy_bullets.reject!{|b| bullets.include? b}
     end
   end
 
   def set_lockon_mode
     target = @robots.values.select{|a| time - a[:latest] <= 8}.sort{|a, b| a[:distance] <=> b[:distance] }.first
     if target
-      if @lockon_target != target or @status != :lockon
+      if num_robots == 2 and target[:energy] < 1 and energy > 8
+        set_ram_attack_mode
+      elsif @lockon_target != target or @status != :lockon
         @lockon_target = target
         debug("lockon: #{@status} => #{@lockon_target[:name]} : #{@lockon_target[:aim_type]}")
         @lockon_start = time
@@ -805,7 +803,14 @@ class Kubota
       @lockon_target = nil
       @patrol_tick = 0
       @status = :patrol
-      @lockon_start = 0
+    end
+  end
+
+  def set_ram_attack_mode
+    unless @status == :ram_attack
+      @ram_attack_start = time
+      debug("ram_attack #{@status} => ram_attack")
+      @status = :ram_attack
     end
   end
 
@@ -863,7 +868,7 @@ class Kubota
   end
 
   def initial
-    @debug_mode = true
+    @debug_mode = false
     debug("gun: #{gun_heading}", "radar: #{radar_heading}")
     @turn_angle = 0
     @acceleration = 0
@@ -884,6 +889,8 @@ class Kubota
     @turn_gun_angle = 0
     @replay_point = nil
     @position = nil
+    @lockon_start = 0 unless @status == :lockon
+    @ram_attack_start = 0 unless @status == :ram_attack
   end
 
   def tick events
@@ -898,7 +905,6 @@ class Kubota
       return
     end
 
-    p events['crash_into_wall'] if events['crash_into_wall'].length > 0
     robot_scanned events['robot_scanned']
     move_bullets
     draw_gun_heading
