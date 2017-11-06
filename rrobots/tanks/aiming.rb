@@ -1,11 +1,12 @@
 require 'rrobots'
 require "#{File.dirname(__FILE__)}/utils/sample"
 
-class Shooter
+class Aiming
   include Robot
   include SampleUtil
 
   def tick events
-    quick_shoot
+    @turn_angle = 0
+    shoot_uniform_speed
   end
 end

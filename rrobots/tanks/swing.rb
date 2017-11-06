@@ -1,5 +1,6 @@
-require 'securerandom'
 require 'rrobots'
+
+require 'securerandom'
 class Swing
   include Robot
 

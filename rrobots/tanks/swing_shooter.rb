@@ -1,10 +1,11 @@
-require 'securerandom'
 require 'rrobots'
-require "#{File.dirname(__FILE__)}/utils/shooter"
+require "#{File.dirname(__FILE__)}/utils/sample"
 
-class Swingshooter
+require 'securerandom'
+
+class SwingShooter
   include Robot
-  include ShooterUtil
+  include SampleUtil
 
   def tick events
     if time % 900 < 30
@@ -16,6 +17,5 @@ class Swingshooter
       accelerate -1
     end
     quick_shoot
-
   end
 end

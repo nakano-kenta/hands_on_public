@@ -1,9 +1,9 @@
 require 'rrobots'
-require "#{File.dirname(__FILE__)}/utils/wall"
+require "#{File.dirname(__FILE__)}/utils/sample"
 
 class Wall
   include Robot
-  include WallUtil
+  include SampleUtil
 
   def tick events
     turn_radar 2 if time % 2 == 1

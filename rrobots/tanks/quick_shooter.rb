@@ -1,9 +1,9 @@
 require 'rrobots'
-require "#{File.dirname(__FILE__)}/utils/shooter"
+require "#{File.dirname(__FILE__)}/utils/sample"
 
 class QuickShooter
   include Robot
-  include ShooterUtil
+  include SampleUtil
 
   def tick events
     if @will_fire

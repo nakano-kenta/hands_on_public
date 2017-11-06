@@ -35,6 +35,10 @@ class OptionsParser
         options.gui = y
       end
 
+      opts.on("--slow N", Float, "Sleep N seconds every tick") do |n|
+        options.slow = n
+      end
+
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit
@@ -94,7 +98,7 @@ end
 
 def setup_battlefield(options, robots)
   teams = Array.new([options.teams, robots.size].min){ [] }
-  battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, options.match
+  battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, options.match, options.slow
 
   c = 0
   team_divider = (robots.size / teams.size.to_f).ceil

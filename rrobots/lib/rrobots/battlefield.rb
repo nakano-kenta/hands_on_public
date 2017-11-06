@@ -10,7 +10,7 @@ class Battlefield
    attr_reader :timeout  # how many ticks the match can go before ending.
    attr_reader :game_over
 
-  def initialize width, height, timeout, match
+  def initialize width, height, timeout, match, slow
     @width, @height = width, height
     @match = match
     @time = 0
@@ -19,6 +19,7 @@ class Battlefield
     @bullets = []
     @explosions = []
     @timeout = timeout
+    @slow = slow
     @game_over = false
   end
 
@@ -53,6 +54,7 @@ class Battlefield
     end
 
     @time += 1
+    sleep @slow if @slow
     live_robots = robots.find_all{|robot| !robot.dead}
     @game_over = (  (@time >= timeout) or # timeout reached
                     (live_robots.length == 0) or # no robots alive, draw game
