@@ -4,7 +4,8 @@ BIG_FONT = 'Courier New'
 SMALL_FONT = 'Courier New'
 COLORS = ['white', 'blue', 'yellow', 'red', 'lime']
 FONT_COLORS = [0xffffffff, 0xff0008ff, 0xfffff706, 0xffff0613, 0xff00ff04]
-
+X_PADDING = 264
+Y_PADDING = 24
 GosuRobot = Struct.new(:body, :gun, :radar, :speech, :info, :status, :color, :font_color)
 
 module ZOrder
@@ -16,17 +17,16 @@ class RRobotsGameWindow < Gosu::Window
   attr_accessor :on_game_over_handlers, :boom, :robots, :bullets, :explosions
 
   def initialize(battlefield, xres, yres)
-    super(xres, yres, false, 16)
+    super(xres+X_PADDING, yres+Y_PADDING, false, 16)
     self.caption = 'RRobots'
     @font = Gosu::Font.new(self, BIG_FONT, 24)
     @small_font = Gosu::Font.new(self, SMALL_FONT, 24) #xres/100
-    @background_image = Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/space.png"), true)
     @battlefield = battlefield
     @xres, @yres = xres, yres
     @on_game_over_handlers = []
     init_window
     init_simulation
-    @leaderboard = Leaderboard.new(self, @robots)
+    @leaderboard = Leaderboard.new(self, @robots, @battlefield)
   end
 
   def on_game_over(&block)
@@ -54,6 +54,7 @@ class RRobotsGameWindow < Gosu::Window
   end
 
   def draw_battlefield
+    Gosu.draw_rect(0,0,@xres,@yres,Gosu::Color.argb(0xff_222266), ZOrder::Background)
     draw_robots
     draw_bullets
     draw_explosions
