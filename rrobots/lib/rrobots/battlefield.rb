@@ -54,9 +54,9 @@ class Battlefield
     end
 
     @time += 1
-    sleep @slow if @slow
+    sleep @slow if @slow.to_f > 0
     live_robots = robots.find_all{|robot| !robot.dead}
-    @game_over = (  (@time >= timeout) or # timeout reached
+    @game_over = (  (@time >= @timeout) or # timeout reached
                     (live_robots.length == 0) or # no robots alive, draw game
                     (live_robots.all?{|r| r.team == live_robots.first.team})) # all other teams are dead
     not @game_over

@@ -120,6 +120,10 @@ class RobotRunner
     @energy <= 0
   end
 
+  def zonbi?
+    @energy <= 0.3
+  end
+
   def clamp(var, min, max)
     val = 0 + var # to guard against poisoned vars
     if val > max
@@ -247,12 +251,14 @@ class RobotRunner
   end
 
   def robot_tick
-    @robot.tick @robot.events
+    unless zonbi?
+      @robot.tick @robot.events
+    end
     @events.clear
   end
 
   def fire
-    return if @energy <= 0.3
+    return if zonbi?
     @actions[:fire] = (@energy - 0.1) if @actions[:fire] > @energy
     if (@actions[:fire] > 0) && (@gun_heat == 0)
       bullet = Bullet.new(@battlefield, @x, @y, @gun_heading, 30, @actions[:fire]*3.3 , self)
@@ -278,7 +284,7 @@ class RobotRunner
   end
 
   def move
-    @speed = 0 if @energy <= 0.3
+    @speed = 0 if zonbi?
     @prev_speed = @speed
     @prev_x = @x
     @prev_y = @y

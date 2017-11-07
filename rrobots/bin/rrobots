@@ -96,7 +96,8 @@ def print_outcome(battlefield)
   puts
 end
 
-def setup_battlefield(options, robots)
+def setup_battlefield(options, robots, round)
+  @durable_context_by_name ||= {}
   teams = Array.new([options.teams, robots.size].min){ [] }
   battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, options.match, options.slow
 
@@ -104,29 +105,32 @@ def setup_battlefield(options, robots)
   team_divider = (robots.size / teams.size.to_f).ceil
   robots.map! do |robot|
     begin
-    begin
-      require "./"+robot.downcase
-    rescue LoadError
-    end
-    begin
-      require "./"+robot
-    rescue LoadError
-    end
+      begin
+        require "./"+robot.downcase
+      rescue LoadError
+      end
+      begin
+        require "./"+robot
+      rescue LoadError
+      end
 
-    in_game_name = File.basename(robot).sub(/\..*$/, '')
-    in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
-    team = c / team_divider
-    c += 1
-    robot = Object.const_get(in_game_name).new
-    if options.gui
-      robot.gui = true
-    else
-      robot.gui = false
-    end
-    robotrunner = RobotRunner.new(robot, battlefield, team, options)
-    battlefield << robotrunner
+      in_game_name = File.basename(robot).sub(/\..*$/, '')
+      in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
+      team = c / team_divider
+      c += 1
+      robot = Object.const_get(in_game_name).new
+      if options.gui
+        robot.gui = true
+      else
+        robot.gui = false
+      end
+      robot.round = round
+      @durable_context_by_name[in_game_name] ||= {}
+      robot.durable_context = @durable_context_by_name[in_game_name]
+      robotrunner = RobotRunner.new(robot, battlefield, team, options)
+      battlefield << robotrunner
     rescue Exception => error
-      puts 'Error loading ' + robot + '!'
+      puts 'Error loading ' + in_game_name + '!'
       warn error
     end
     in_game_name
@@ -159,7 +163,7 @@ end
 
 summaries = {}
 (options.match || 1).times.each do |i|
-  battlefield = setup_battlefield(options, robots)
+  battlefield = setup_battlefield(options, robots, i+1)
   if options.gui
     run_in_gui(battlefield, options.resolution[0], options.resolution[1])
   else

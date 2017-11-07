@@ -84,7 +84,18 @@ class Kubota
   MAX_SPEED = 8
   BULLET_SPPED = 30
   FIRE_POWR_RATIO = 3.3
-  SAFETY_DISTANCE = 500
+  SAFETY_DISTANCE = 300
+
+
+  NUM_FIRE_LOGS = 20
+  NUM_HIT_LOGS = 20
+  NUM_GOT_HIT_LOGS = 20
+  NUM_LOGS = 1500
+
+  PATTERN_LENGTH = 300
+  PATTERN_CANDIDATES = 200
+  PATTERN_OFFSET = 30
+
   def debug(*msg)
     p *msg if @debug_mode
   end
@@ -187,9 +198,6 @@ class Kubota
   BULLET_AFFECT_DISTANCE = 200
   BULLET_ALPHA = 50
   BULLET_MULTI = 2
-  # SIDEPOS_AFFECT_DISTANCE = 100
-  # SIDEPOS_ALPHA = 20
-  # SIDEPOS_MULTI = 0
   RAM_AFFECT_DISTANCE = 100
   RAM_ALPHA = 100
   RAM_MULTI = 1
@@ -263,8 +271,10 @@ class Kubota
       end
 
       if @status == :lockon and num_robots == 2
-        left_or_right (@heading + @turn_angle), @lockon_target[:direction] do |direction, diff|
-          @turn_angle = diff / 2
+        if @lockon_target[:distance] > SAFETY_DISTANCE
+          left_or_right (@heading + @turn_angle), @lockon_target[:direction] do |direction, diff|
+            @turn_angle = diff / 2
+          end
         end
       end
 
@@ -289,21 +299,6 @@ class Kubota
   end
 
   def decide_move
-    # if @status == :lockon
-    #   delta = {x: 0, y: 0}
-    #   target_direction = to_direction(position, @lockon_target[:prospect_point])
-      # if @lockon_target[:distance] > SAFETY_DISTANCE
-      #   side_angle = 90
-      #   side_angle = 110 if @lockon_target[:distance] > 800
-      #   left = @lockon_target[:direction] - side_angle
-      #   right = @lockon_target[:direction] + side_angle
-      #   if diff_direction(left, target_direction).abs < diff_direction(right, target_direction).abs
-      #     put_anti_gravity_point(0, to_point(right, 5, position), SIDEPOS_AFFECT_DISTANCE, SIDEPOS_ALPHA, SIDEPOS_MULTI)
-      #   else
-      #     put_anti_gravity_point(0, to_point(left, 5, position), SIDEPOS_AFFECT_DISTANCE, SIDEPOS_ALPHA, SIDEPOS_MULTI)
-      #   end
-      # end
-    # end
     if @status == :ram_attack and (time - @ram_attack_start) > 80
       target = @robots.values.max{|a, b| a[:latest] <=> b[:latest] }
       set_destination(target[:prospect_point])
@@ -365,9 +360,6 @@ class Kubota
     }
   end
 
-  PATTERN_LENGTH = 300
-  PATTERN_CANDIDATES = 200
-  PATTERN_OFFSET = 30
   def prospect_next_by_pattern(robot)
     if @replay_point == nil
       diff_by_past = {}
@@ -426,8 +418,9 @@ class Kubota
         ret[:acceleration] = log[:acceleration]
         return prospect_next_by_acceleration ret
       end
+    else
+      prospect_next_by_acceleration robot
     end
-    nil
   end
 
   def next_speed(current, acceleration)
@@ -451,7 +444,12 @@ class Kubota
         n = [n, @energy / 2].min
       end
       fire n
-      debug("Fire(#{n}) : #{robot[:aim_type]}")
+      if @debug_mode
+        @log_by_aim_type[:direct] ||= {hit: 0, ratio: 0}
+        @log_by_aim_type[:accelerated] ||= {hit: 0, ratio: 0}
+        @log_by_aim_type[:pattern] ||= {hit: 0, ratio: 0}
+        debug "Fire(#{n}) : #{robot[:aim_type]}  [ direct: #{@log_by_aim_type[:direct][:hit]}, accelerated: #{@log_by_aim_type[:accelerated][:hit]}, pattern: #{@log_by_aim_type[:pattern][:hit]} ]"
+      end
       @bullets << {
         tick: time,
         start: position,
@@ -514,6 +512,7 @@ class Kubota
         y: position[:y],
         time: time
       }
+      robot[:fire_logs] = robot[:fire_logs].last NUM_FIRE_LOGS
     end
   end
 
@@ -551,6 +550,8 @@ class Kubota
         set_patrol_mode
       end
       target_direction = to_direction(my_future_position, prospect_next_by_acceleration(target_future)[:prospect_point])
+    else
+      debug("Failure to prospect!! #{@status} #{@lockon_target[:aim_type]}") # TODO
     end
     @turn_gun_angle = max_turn diff_direction(target_direction, gun_heading + @turn_angle), MAX_GUN_TURN
     turn_gun @turn_gun_angle
@@ -559,21 +560,21 @@ class Kubota
   def decide_fire
     return unless @status == :lockon
     if @lockon_target and (time - @lockon_start) > 4
-      log_by_aim_type = {}
+      power = @lockon_target[:energy]/(FIRE_POWR_RATIO-0.01)
+      @log_by_aim_type = {}
       @lockon_target[:hit_logs].reverse.first(10).each do |hit_log|
-        log_by_aim_type[hit_log[:aim_type]] ||= {
+        @log_by_aim_type[hit_log[:aim_type]] ||= {
           aim_type: hit_log[:aim_type],
           hit: 0,
           miss: 0
         }
-        log_by_aim_type[hit_log[:aim_type]][:hit] += hit_log[:hit].to_i
-        log_by_aim_type[hit_log[:aim_type]][:miss] += hit_log[:miss].to_i
-        log_by_aim_type[hit_log[:aim_type]][:ratio] = log_by_aim_type[hit_log[:aim_type]][:hit] / (log_by_aim_type[hit_log[:aim_type]][:hit] + log_by_aim_type[hit_log[:aim_type]][:miss]).to_f
+        @log_by_aim_type[hit_log[:aim_type]][:hit] += hit_log[:hit].to_i
+        @log_by_aim_type[hit_log[:aim_type]][:miss] += hit_log[:miss].to_i
+        @log_by_aim_type[hit_log[:aim_type]][:ratio] = @log_by_aim_type[hit_log[:aim_type]][:hit] / (@log_by_aim_type[hit_log[:aim_type]][:hit] + @log_by_aim_type[hit_log[:aim_type]][:miss]).to_f
       end
-      highest_log = log_by_aim_type.values.max do |a, b|
+      highest_log = @log_by_aim_type.values.max do |a, b|
         a[:ratio] <=> b[:ratio]
       end
-      power = @lockon_target[:energy]/(FIRE_POWR_RATIO-0.01)
       if highest_log and highest_log[:ratio] > 0
         @lockon_target[:aim_type] = highest_log[:aim_type]
         if highest_log[:hit] <= 2
@@ -662,6 +663,7 @@ class Kubota
         prospect_point: point,
         acceleration: robot[:acceleration],
       }
+      robot[:logs] = robot[:logs].last(NUM_LOGS)
       robot[:latest] = time
       robot[:hit] = 0
     end
@@ -679,6 +681,7 @@ class Kubota
           prospect_point: future[:prospect_point],
           acceleration: future[:acceleration]&.dup,
         }
+        robot[:logs] = robot[:logs].last(NUM_LOGS)
       end
     end
   end
@@ -736,18 +739,6 @@ class Kubota
             speed: BULLET_SPPED,
             aim_type: :accelerated
           }
-
-          # if robot[:distance] > SAFETY_DISTANCE
-          #   if SecureRandom.random_number < 0.5
-          #     right = robot[:direction] + 90
-          #     p 'PUT: right'
-          #     put_anti_gravity_point(16, to_point(right, 40, position), 300, 1, 1)
-          #   else
-          #     p 'PUT: left'
-          #     left = robot[:direction] - 90
-          #     put_anti_gravity_point(16, to_point(left, 40, position), 300, 1, 1)
-          #   end
-          # end
         end
       end
     end
@@ -763,6 +754,7 @@ class Kubota
       if bullet
         @bullets.reject!{|b| b == bullet}
         robot[:hit_logs] << {hit: 1, aim_type: bullet[:aim_type]}
+        robot[:hit_logs] = robot[:hit_logs].last(NUM_HIT_LOGS)
       end
     end
   end
@@ -775,6 +767,7 @@ class Kubota
       end
       bullets.each do |bullet|
         robot[:got_hit_logs] << bullet[:aim_type]
+        robot[:got_hit_logs] = robot[:got_hit_logs].last(NUM_GOT_HIT_LOGS)
       end
       @enemy_bullets.reject!{|b| bullets.include? b}
     end
@@ -819,10 +812,12 @@ class Kubota
       bullet[:point] = to_point bullet[:heading], bullet[:speed], bullet[:point]
       robot = bullet[:robot]
       if distance(robot[:prospect_point], bullet[:point]) < @size
-        bullet[:robot][:hit_logs] << {hit: 1, aim_type: bullet[:aim_type]}
+        robot[:hit_logs] << {hit: 1, aim_type: bullet[:aim_type]}
+        robot[:hit_logs] = robot[:hit_logs].last(NUM_HIT_LOGS)
         false
       elsif out_of_field?(bullet[:point])
-        bullet[:robot][:hit_logs] << {miss: 1, aim_type: bullet[:aim_type]}
+        robot[:hit_logs] << {miss: 1, aim_type: bullet[:aim_type]}
+        robot[:hit_logs] = robot[:hit_logs].last(NUM_HIT_LOGS)
         false
       else
         true
@@ -867,13 +862,24 @@ class Kubota
     end
   end
 
+  def center
+    {x: battlefield_width, y: battlefield_height}
+  end
+
   def initial
     @debug_mode = false
     debug("gun: #{gun_heading}", "radar: #{radar_heading}")
     @turn_angle = 0
     @acceleration = 0
     @prev_radar_heading = radar_heading
-    @robots = {}
+    @durable_context[:robots] ||= {}
+    @durable_context[:robots].each do |name, robot|
+      robot[:latest] = 0
+      robot[:energy] = 100
+      robot[:prospect_point] = center
+      robot[:acceleration] = nil
+    end
+    @robots = @durable_context[:robots]
     @bullets = []
     @enemy_bullets = []
     @anti_gravity_points = []

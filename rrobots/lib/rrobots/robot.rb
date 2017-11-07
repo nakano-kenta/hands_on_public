@@ -114,4 +114,6 @@ module Robot
 
   attr_state :num_robots
   attr_state :gui
+  attr_state :round
+  attr_accessor :durable_context
 end
