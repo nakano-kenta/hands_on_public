@@ -82,27 +82,51 @@ class RRobotsGameWindow < Gosu::Window
   end
 
   def draw_robots
+    unless @bodies
+      @bodies = {}
+      COLORS.each do |color|
+        @bodies[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_body000.bmp"))
+      end
+    end
+    unless @turrets
+      @turrets = {}
+      COLORS.each do |color|
+        @turrets[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_turret000.bmp"))
+      end
+    end
+    unless @radars
+      @radars = {}
+      COLORS.each do |color|
+        @radars[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_radar000.bmp"))
+      end
+    end
     @battlefield.robots.each_with_index do |ai, i|
       next if ai.dead
-      col = COLORS[i % COLORS.size]
-      font_col = FONT_COLORS[i % FONT_COLORS.size]
+      default_font_color = FONT_COLORS[i % FONT_COLORS.size]
+      default_color = COLORS[i % COLORS.size]
       @robots[ai] ||= GosuRobot.new(
-        Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{col}_body000.bmp")),
-        Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{col}_turret000.bmp")),
-        Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{col}_radar000.bmp")),
+        nil,
+        nil,
+        nil,
         @small_font,
         @small_font,
         @small_font,
-        col,
-        font_col
+        default_color,
+        nil
       )
+      @robots[ai].font_color = FONT_COLORS[COLORS.index(ai.font_color)] if COLORS.include? ai.font_color
+      @robots[ai].font_color ||= default_font_color
+      @robots[ai].body = @bodies[ai.body_color] || @bodies[default_color]
+      @robots[ai].gun = @turrets[ai.turret_color] || @turrets[default_color]
+      @robots[ai].radar = @radars[ai.radar_color] || @radars[default_color]
+
       @robots[ai].body.draw_rot(ai.x / 2, ai.y / 2, ZOrder::Robot, (-(ai.heading-90)) % 360)
       @robots[ai].gun.draw_rot(ai.x / 2, ai.y / 2, ZOrder::Robot, (-(ai.gun_heading-90)) % 360)
       @robots[ai].radar.draw_rot(ai.x / 2, ai.y / 2, ZOrder::Robot, (-(ai.radar_heading-90)) % 360)
 
-      @robots[ai].speech.draw_rel(ai.speech.to_s, ai.x / 2, ai.y / 2 - 40, ZOrder::UI, 0.5, 0.5, 1, 1, font_col)
-      @robots[ai].info.draw_rel("#{ai.name}", ai.x / 2, ai.y / 2 + 30, ZOrder::UI, 0.5, 0.5, 1, 1, font_col)
-      @robots[ai].info.draw_rel("#{ai.energy.to_i}", ai.x / 2, ai.y / 2 + 50, ZOrder::UI, 0.5, 0.5, 1, 1, font_col)
+      @robots[ai].speech.draw_rel(ai.speech.to_s, ai.x / 2, ai.y / 2 - 40, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
+      @robots[ai].info.draw_rel("#{ai.name}", ai.x / 2, ai.y / 2 + 30, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
+      @robots[ai].info.draw_rel("#{ai.energy.to_i}", ai.x / 2, ai.y / 2 + 50, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
     end
   end
 

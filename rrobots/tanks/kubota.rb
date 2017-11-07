@@ -96,6 +96,42 @@ class Kubota
   PATTERN_CANDIDATES = 200
   PATTERN_OFFSET = 30
 
+  def before_start
+    @debug_mode = false
+    body_color 'red'
+    radar_color 'red'
+    turret_color 'red'
+    font_color 'red'
+  end
+
+  def tick events
+    initial if time == 0
+    initial_for_tick events
+
+    if num_robots == 1
+      @status = :win
+      accelerate -speed
+      turn MAX_TURN
+      turn_gun MAX_GUN_TURN
+      return
+    end
+
+    robot_scanned events['robot_scanned']
+    move_bullets
+    draw_gun_heading
+    draw_bullets
+    hit events['hit']
+    got_hit events['got_hit']
+    eval_enemy_bullet events['robot_scanned']
+    decide_move
+    do_move
+    decide_fire
+    decide_scan
+    @my_past_position = position
+    draw_destination
+  end
+
+  private
   def debug(*msg)
     p *msg if @debug_mode
   end
@@ -867,7 +903,6 @@ class Kubota
   end
 
   def initial
-    @debug_mode = false
     debug("gun: #{gun_heading}", "radar: #{radar_heading}")
     @turn_angle = 0
     @acceleration = 0
@@ -888,7 +923,14 @@ class Kubota
     set_patrol_mode
   end
 
+  COLORS = ['white', 'blue', 'yellow', 'red', 'lime'].freeze
   def initial_for_tick events
+    color = COLORS[(time / 5) % COLORS.size]
+    body_color color
+    radar_color color
+    turret_color color
+    font_color color
+
     @my_future_position = nil
     @acceleration = 0
     @turn_angle = 0
@@ -899,30 +941,5 @@ class Kubota
     @ram_attack_start = 0 unless @status == :ram_attack
   end
 
-  def tick events
-    initial if time == 0
-    initial_for_tick events
 
-    if num_robots == 1
-      @status = :win
-      accelerate -speed
-      turn MAX_TURN
-      turn_gun MAX_GUN_TURN
-      return
-    end
-
-    robot_scanned events['robot_scanned']
-    move_bullets
-    draw_gun_heading
-    draw_bullets
-    hit events['hit']
-    got_hit events['got_hit']
-    eval_enemy_bullet events['robot_scanned']
-    decide_move
-    do_move
-    decide_fire
-    decide_scan
-    @my_past_position = position
-    draw_destination
-  end
 end

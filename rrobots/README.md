@@ -86,3 +86,9 @@ https://github.com/logankoester/rrobots
 
 ## Robot storage
 * **durable_context** - durable context among all matches
+
+## Robot colors
+* **font_color** - ['white', 'blue', 'yellow', 'red', 'lime']
+* **body_color** - ['white', 'blue', 'yellow', 'red', 'lime']
+* **turrent_color** - ['white', 'blue', 'yellow', 'red', 'lime']
+* **radar_color** - ['white', 'blue', 'yellow', 'red', 'lime']

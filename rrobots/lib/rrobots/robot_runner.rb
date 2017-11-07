@@ -5,6 +5,7 @@ class RobotRunner
   STATE_IVARS = [ :x, :y, :gun_heat, :heading, :gun_heading, :radar_heading, :time, :size, :speed, :energy, :team ]
   NUMERIC_ACTIONS = [ :fire, :turn, :turn_gun, :turn_radar, :accelerate ]
   STRING_ACTIONS = [ :say, :broadcast ]
+  STYLES = [ :font_color, :body_color, :turret_color, :radar_color ]
 
   STATE_IVARS.each{|iv|
     attr_accessor iv
@@ -14,6 +15,10 @@ class RobotRunner
   }
   STRING_ACTIONS.each{|iv|
     attr_accessor "#{iv}_max"
+  }
+
+  STYLES.each{|iv|
+    define_method(iv){|| @robot.styles[iv] }
   }
 
   #AI of this robot
@@ -49,6 +54,8 @@ class RobotRunner
     set_initial_state
     @events = Hash.new{|h, k| h[k]=[]}
     @actions = Hash.new(0)
+    @robot.styles = Hash.new(0)
+    @robot.before_start if @robot.respond_to? :before_start
   end
 
   def skin_prefix

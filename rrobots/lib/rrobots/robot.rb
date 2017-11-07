@@ -22,6 +22,13 @@ module Robot
     }
   end
 
+  def self.attr_style(*names)
+    names.each{|n|
+      n = n.to_sym
+      define_method(n){|param| @styles[n] = param }
+    }
+  end
+
   #the state hash of your robot. also accessible through the attr_state methods
   attr_accessor :state
 
@@ -116,4 +123,9 @@ module Robot
   attr_state :gui
   attr_state :round
   attr_accessor :durable_context
+  attr_style :font_color
+  attr_style :body_color
+  attr_style :turret_color
+  attr_style :radar_color
+  attr_accessor :styles
 end
