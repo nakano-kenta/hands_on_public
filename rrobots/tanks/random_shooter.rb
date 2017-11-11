@@ -14,7 +14,7 @@ class RandomShooter
       turn -heading
       return
     elsif y < @size * 2
-      turn 270 - heading
+      turn -90 - heading
       return
     elsif x > battlefield_width - @size * 2
       turn 180 - heading
