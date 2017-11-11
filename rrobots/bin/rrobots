@@ -156,7 +156,7 @@ def print_results(head, results)
   puts head
   puts
   results.each do |result|
-    puts "robots : #{result[:name]}"
+    puts "#{result[:name]}:"
     puts "    score:               #{result[:score]}"
     puts "    win:                 #{result[:win]}"
     puts "    kills:               #{result[:kills]}"
