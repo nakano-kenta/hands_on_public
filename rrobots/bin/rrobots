@@ -185,7 +185,7 @@ summaries = {}
       ram_damage_taken: robot.ram_damage_taken,
       ram_kills: robot.ram_kills,
     }
-    if summaries[robot.name]
+    if summaries[robot.uniq_name]
       result.each do |k , v|
         unless v.instance_of? String
           summaries[robot.uniq_name][k] += v
