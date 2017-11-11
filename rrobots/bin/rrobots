@@ -125,9 +125,10 @@ def setup_battlefield(options, robots, round)
         robot.gui = false
       end
       robot.round = round
-      @durable_context_by_name[in_game_name] ||= {}
-      robot.durable_context = @durable_context_by_name[in_game_name]
+      @durable_context_by_name[c] ||= {}
+      robot.durable_context = @durable_context_by_name[c]
       robotrunner = RobotRunner.new(robot, battlefield, team, options)
+      robotrunner.uniq_name = "#{in_game_name}_#{c}"
       battlefield << robotrunner
     rescue Exception => error
       puts 'Error loading ' + in_game_name + '!'
@@ -173,7 +174,7 @@ summaries = {}
   results = battlefield.robots.map do |robot|
     result = {
       win: (!robot.dead ? 1 : 0),
-      name: robot.name,
+      name: robot.uniq_name,
       score: (!robot.dead ? 1 : 0) * 300 + (robot.kills * 50) + (robot.bullet_damage_given + (robot.ram_damage_given * 2)) * 2 + (robot.ram_kills * 100),
       kills: robot.kills,
       damage_given: robot.damage_given,
@@ -187,11 +188,11 @@ summaries = {}
     if summaries[robot.name]
       result.each do |k , v|
         unless v.instance_of? String
-          summaries[robot.name][k] += v
+          summaries[robot.uniq_name][k] += v
         end
       end
     else
-      summaries[robot.name] = result
+      summaries[robot.uniq_name] = result
     end
     result
   end

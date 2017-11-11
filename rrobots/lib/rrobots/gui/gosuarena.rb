@@ -71,14 +71,15 @@ class RRobotsGameWindow < Gosu::Window
           whohaswon = if winner.nil?
             "Draw!"
           elsif @battlefield.teams.all?{|k,t|t.size<2}
-            "#{winner.name} won!"
+            "#{winner.uniq_name} won!"
           else
             "Team #{winner.team} won!"
           end
           text_color = winner ? winner.team : 7
           @font.draw_rel("#{whohaswon}", xres/2, yres/2, ZOrder::UI, 0.5, 0.5, 1, 1, 0xffffff00)
+      else
+        @battlefield.tick
       end
-      @battlefield.tick
     end
   end
 
@@ -126,7 +127,7 @@ class RRobotsGameWindow < Gosu::Window
       @robots[ai].radar.draw_rot(ai.x / 2, ai.y / 2, ZOrder::Robot, (-(ai.radar_heading-90)) % 360)
 
       @robots[ai].speech.draw_rel(ai.speech.to_s, ai.x / 2, ai.y / 2 - 40, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
-      @robots[ai].info.draw_rel("#{ai.name}", ai.x / 2, ai.y / 2 + 30, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
+      @robots[ai].info.draw_rel("#{ai.uniq_name}", ai.x / 2, ai.y / 2 + 30, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
       @robots[ai].info.draw_rel("#{ai.energy.to_i}", ai.x / 2, ai.y / 2 + 50, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
     end
   end

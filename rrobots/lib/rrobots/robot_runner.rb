@@ -21,6 +21,7 @@ class RobotRunner
     define_method(iv){|| @robot.styles[iv] }
   }
 
+  attr_accessor :uniq_name
   #AI of this robot
   attr_accessor :robot
 
@@ -110,13 +111,13 @@ class RobotRunner
     damage = bullet.energy
     @energy -= damage
     @events['got_hit'] << {
-      from: bullet.origin.name,
+      from: bullet.origin.uniq_name,
       damage: damage,
     }
     if !bullet.origin.dead
       bullet.origin.energy += damage * 2/3
       bullet.origin.events['hit'] << {
-        to: name,
+        to: uniq_name,
         damage: damage
       }
     end
@@ -173,7 +174,7 @@ class RobotRunner
     @battlefield.robots.each do |other|
       if (other != self) && (!other.dead)
         difference = Math.hypot(@y - other.y, other.x - @x)
-        if difference <= @size * 2 and !@events['crash_into_enemy'].any?{|event| event[:with] == other.name}
+        if difference <= @size * 2 and !@events['crash_into_enemy'].any?{|event| event[:with] == other.uniq_name}
           dx = Math::cos(@heading.to_rad) * @speed
           dy = -Math::sin(@heading.to_rad) * @speed
           other_dx = Math::cos(other.heading.to_rad) * other.speed
@@ -209,11 +210,11 @@ class RobotRunner
             other.ram_kills += 1
           end
           @events['crash_into_enemy'] << {
-            with: other.name,
+            with: other.uniq_name,
             damage: damage
           }
           other.events['crash_into_enemy'] << {
-            with: name,
+            with: uniq_name,
             damage: damage
           }
         end
@@ -337,7 +338,7 @@ class RobotRunner
   end
 
   def scan
-    @battlefield.robots.each do |other|
+    @battlefield.robots.each_with_index do |other, index|
       if (other != self) && (!other.dead)
         a = Math.atan2(@y - other.y, other.x - @x) / Math::PI * 180 % 360
         if (@old_radar_heading <= a && a <= @new_radar_heading) || (@old_radar_heading >= a && a >= @new_radar_heading) ||
@@ -347,7 +348,7 @@ class RobotRunner
             distance: Math.hypot(@y - other.y, other.x - @x),
             direction: to_direction({x: @x, y: @y}, {x: other.x, y: other.y}),
             energy: other.energy,
-            name: other.name
+            name: other.uniq_name,
           }
         end
       end
@@ -385,5 +386,9 @@ class RobotRunner
 
   def name
     @robot.class.name
+  end
+
+  def game_over
+    @robot.game_over
   end
 end

@@ -128,4 +128,8 @@ module Robot
   attr_style :turret_color
   attr_style :radar_color
   attr_accessor :styles
+
+  def game_over
+
+  end
 end
