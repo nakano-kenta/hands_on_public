@@ -35,7 +35,7 @@ class RRobotsGameWindow < Gosu::Window
 
   def init_window
     @boom = (0..14).map do |i|
-      Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/explosion#{i.to_s.rjust(2, '0')}.bmp"))
+      Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/explosion#{i.to_s.rjust(2, '0')}.png"))
     end
     @bullet_image = Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/bullet.png"))
   end
@@ -87,19 +87,19 @@ class RRobotsGameWindow < Gosu::Window
     unless @bodies
       @bodies = {}
       COLORS.each do |color|
-        @bodies[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_body000.bmp"))
+        @bodies[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_body000.png"))
       end
     end
     unless @turrets
       @turrets = {}
       COLORS.each do |color|
-        @turrets[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_turret000.bmp"))
+        @turrets[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_turret000.png"))
       end
     end
     unless @radars
       @radars = {}
       COLORS.each do |color|
-        @radars[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_radar000.bmp"))
+        @radars[color] =  Gosu::Image.new(self, File.join(File.dirname(__FILE__),"../images/#{color}_radar000.png"))
       end
     end
     @battlefield.robots.each_with_index do |ai, i|
