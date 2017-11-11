@@ -9,7 +9,7 @@ class OptionsParser
     options.resolution  = [800,800]
     options.match = Time.now.to_i + Process.pid
     options.gui = true
-    options.timeout = 50000
+    options.timeout = 5000
     options.teams = 8
 
     opts = OptionParser.new do |opts|
