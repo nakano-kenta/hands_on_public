@@ -39,6 +39,10 @@ class OptionsParser
         options.slow = n
       end
 
+      opts.on_tail("--league", "Leage battle") do
+        options.league = true
+      end
+
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit
@@ -101,23 +105,22 @@ def setup_battlefield(options, robots, round)
   teams = Array.new([options.teams, robots.size].min){ [] }
   battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, options.match, options.slow
 
-  c = 0
   team_divider = (robots.size / teams.size.to_f).ceil
-  robots.map! do |robot|
+  robots.each do |robot|
+    c = robot[1]
     begin
       begin
-        require "./"+robot.downcase
+        require "./"+robot[0].downcase
       rescue LoadError
       end
       begin
-        require "./"+robot
+        require "./"+robot[0]
       rescue LoadError
       end
 
-      in_game_name = File.basename(robot).sub(/\..*$/, '')
+      in_game_name = File.basename(robot[0]).sub(/\..*$/, '')
       in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
       team = c / team_divider
-      c += 1
       robot = Object.const_get(in_game_name).new
       if options.gui
         robot.gui = true
@@ -143,6 +146,11 @@ $stdout.sync = true
 
 options = OptionsParser.parse!(ARGV)
 robots = ARGV
+robot_index = 0
+robots = robots.map do |robot, index|
+  robot_index += 1
+  [robot, robot_index]
+end
 
 def print_results(head, results)
   puts head
@@ -162,9 +170,8 @@ def print_results(head, results)
   end
 end
 
-summaries = {}
-(options.match || 1).times.each do |i|
-  battlefield = setup_battlefield(options, robots, i+1)
+def match(summaries, options, robots, match_no)
+  battlefield = setup_battlefield(options, robots, match_no+1)
   if options.gui
     run_in_gui(battlefield, options.resolution[0], options.resolution[1])
   else
@@ -196,7 +203,23 @@ summaries = {}
     end
     result
   end
-  print_results("=== Battile: #{i} ===", results)
+  print_results("=== Battile: #{match_no} ===", results)
+end
+
+summaries = {}
+match_no = 0
+(options.match || 1).times.each do
+  if options.league
+    robots.each_with_index do |r1, index|
+      robots[(index + 1)..-1].each_with_index do |r2|
+        match_no += 1
+        match(summaries, options, [r1, r2], match_no)
+      end
+    end
+  else
+    match_no += 1
+    match(summaries, options, robots, match_no)
+  end
 end
 print_results('=== Finally ===', summaries.values.sort{|a, b| b[:score] <=> a[:score]})
 
