@@ -10,7 +10,7 @@ class CircleWithAiming
   def tick events
     @turn_angle ||= 3
     if time % 80 == 0
-      @turn_angle *= (SecureRandom.random_number * 0.2 + 0.9)
+      @turn_angle *= (SecureRandom.random_number * 0.3 + 0.85)
     end
     turn @turn_angle
     accelerate_with_random 1, true

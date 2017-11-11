@@ -119,12 +119,11 @@ module SampleUtil
     nearest
   end
 
-  def shoot_uniform_speed
+  def advanced_shoot(&block)
     if @will_fire
       fire 3
       @will_fire = false
     end
-
     nearest = scan_for_fire
     if nearest
       if nearest[:latest] == time
@@ -135,20 +134,26 @@ module SampleUtil
         }
         ticks = (nearest[:distance] / 30) - 1
         if nearest[:point] and gun_heat == 0
-          nx = (point[:x] - nearest[:point][:x]) / (time - @last_nearest) * ticks + point[:x]
-          ny = (point[:y] - nearest[:point][:y]) / (time - @last_nearest) * ticks + point[:y]
-          nangle = ((Math.atan2((ny - y), (x - nx)) - Math::PI) * 180.0 / Math::PI + 360) % 360
-          diff = (nangle - gun_heading) % 360
-          diff -= 360 if diff > 180
-          diff += 360 if diff < -180
-          turn_gun (diff - @turn_angle)
-          if (diff - @turn_angle).abs <= 30
-            @will_fire = true
-          end
+          block.call nearest, ticks, point
         end
       end
       @last_nearest = nearest[:latest]
       nearest[:point] = point
+    end
+  end
+
+  def shoot_uniform_speed
+    advanced_shoot do |nearest, ticks, point|
+      nx = (point[:x] - nearest[:point][:x]) / (time - @last_nearest) * ticks + point[:x]
+      ny = (point[:y] - nearest[:point][:y]) / (time - @last_nearest) * ticks + point[:y]
+      nangle = ((Math.atan2((ny - y), (x - nx)) - Math::PI) * 180.0 / Math::PI + 360) % 360
+      diff = (nangle - gun_heading) % 360
+      diff -= 360 if diff > 180
+      diff += 360 if diff < -180
+      turn_gun (diff - @turn_angle)
+      if (diff - @turn_angle).abs <= 30
+        @will_fire = true
+      end
     end
   end
 end
