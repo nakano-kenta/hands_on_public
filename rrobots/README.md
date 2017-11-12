@@ -13,47 +13,51 @@ RUBYLIB=lib bundle exec ./bin/rrobots --resolution=1500,1500 tanks/simple.rb tan
 https://github.com/logankoester/rrobots
 
 # Study
-`Win means at least 9 wins in 10 battles !!`
-
 ## Entry level (700x700)
-1. Win against Simple
+1. Win 9 games in 10 games against Simple
    Need to turn gun effectively.
-2. Win against Shooter
+2. Win 9 games in 10 games against Shooter
    Need move to avoid getting hit.
-3. Win against Shooter
+3. Win 9 games in 10 games against QuickShooter
    Need move to avoid getting hit.
 
 ## Basic level(700x700)
-10. Win against Aiming
+10. Get 4500 score in 10 games against Aiming
    Need move complicatedly.
-11. Win against Wall
+11. Get 4500 score in 10 games against Wall
    Need to aim uniform speed liner moving targets.
-12. Win against Circle
+12. Get 4500 score in 10 games against Circle
    Need to aim uniform acceleration moving targets.
-13. Win against Swing
+13. Get 4500 score in 10 games against Swing
    Need to aim patterned moving targets.
 
 ## Advansed level(700x700)
-20. Win against WallShooter
-21. Win against CircleShooter
-22. Win against SwingShooter
+20. Get 4500 score in 10 games against WallShooter
+21. Get 4500 score in 10 games against CircleShooter
+22. Get 4500 score in 10 games against SwingShooter
 
 ## Master1(1000x1000)
-23. Win against WallShooter, CircleShooter and SwingShooter
+23. Get 5500 score in 10 games against WallShooter, CircleShooter and SwingShooter
 
 ## Master2(700x700)
-31. Win against WallWithAiming
-32. Win against CircleWithAiming
-33. Win against SiwingWithAiming
+31. Get 4500 score in 10 games against WallWithAiming
+32. Get 4500 score in 10 games against CircleWithAiming
+33. Get 4500 score in 10 games against SiwingWithAiming
 
 ## Master3(1000x1000)
-34. Win against WallWithAiming, CircleWithAiming and SwingWithAiming
+34. Get 5000 score in 10 games against WallWithAiming, CircleWithAiming and SwingWithAiming
 
 ## Master4(700x700)
-50. Win against RandomShooter
+50. Get 4500 score in 10 games against RandomCrawler
 
-## Hell(1500x1500) (勝てるもんなら勝ってみろ！！)
-777. Win against Kubota
+## Nightmare1(700x700)
+500. Win score in 10 games against Kubota (勝てるもんなら勝ってみろ！！)
+
+## Nightmare2(1000x1000)
+600. Win score in 20 games against Kubota (勝てるもんなら勝ってみろ！！)
+
+## Hell(1500x1500)
+777. Win score in 20 games against KubotaAdvance
 
 # Robot interface
 ## Definitions

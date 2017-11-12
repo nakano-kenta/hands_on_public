@@ -3,7 +3,7 @@ require "#{File.dirname(__FILE__)}/utils/sample"
 
 require 'securerandom'
 
-class RandomShooter
+class RandomCrawler
   include Robot
   include SampleUtil
 
