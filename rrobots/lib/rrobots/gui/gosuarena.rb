@@ -134,15 +134,17 @@ class RRobotsGameWindow < Gosu::Window
 
   def draw_bullets
     @battlefield.bullets.each do |bullet|
+      bullet_size = 0.3 + bullet.energy / 7.5
       @bullets[bullet] ||= @bullet_image
-      @bullets[bullet].draw(bullet.x / 2, bullet.y / 2, ZOrder::Explosions)
+      @bullets[bullet].draw(bullet.x / 2, bullet.y / 2, ZOrder::Explosions, bullet_size, bullet_size)
     end
   end
 
   def draw_explosions
     @battlefield.explosions.each do |explosion|
+      explosion_size = 0.25 + explosion.energy / 13.0
       @explosions[explosion] = boom[explosion.t % 14]
-      @explosions[explosion].draw_rot(explosion.x / 2, explosion.y / 2, ZOrder::Explosions, 0)
+      @explosions[explosion].draw_rot(explosion.x / 2, explosion.y / 2, ZOrder::Explosions, 0, 0.5, 0.5, explosion_size, explosion_size)
     end
   end
 end

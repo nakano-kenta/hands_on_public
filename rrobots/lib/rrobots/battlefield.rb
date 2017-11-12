@@ -35,7 +35,7 @@ class Battlefield
     end
   end
 
-  def tick
+   def tick
     explosions.delete_if{|explosion| explosion.dead}
     explosions.each{|explosion| explosion.tick}
 

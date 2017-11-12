@@ -3,9 +3,10 @@ class Explosion
   attr_accessor :y
   attr_accessor :t
   attr_accessor :dead
+  attr_accessor :energy
 
-  def initialize bf, x, y
-    @x, @y, @t = x, y, 0
+  def initialize bf, x, y, e
+    @x, @y, @t, @energy = x, y, 0, e
     @battlefield, dead = bf, false
   end
 

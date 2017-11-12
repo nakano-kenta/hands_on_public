@@ -27,7 +27,7 @@ class Bullet
 
     @battlefield.robots.each do |other|
       if (other != origin) && (Math.hypot(@y - other.y, other.x - @x) < 40) && (!other.dead)
-        explosion = Explosion.new(@battlefield, other.x, other.y)
+        explosion = Explosion.new(@battlefield, other.x, other.y, @energy)
         @battlefield << explosion
         damage = other.hit(self)
         origin.damage_given += damage
