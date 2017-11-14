@@ -76,9 +76,9 @@ module Coordinate
 end
 
 module Util
-  MAX_GUN_TURN = 45.freeze
-  MAX_RADAR_TURN = 60.freeze
   MAX_TURN = 10.freeze
+  MAX_GUN_TURN = 30.freeze
+  MAX_RADAR_TURN = 60.freeze
   MAX_SPEED = 8.freeze
   BULLET_SPPED = 30.freeze
   FIRE_POWR_RATIO = 3.3.freeze
@@ -588,6 +588,7 @@ class Kubota
         speed: robot[:prospect_speed],
         heading: robot[:prospect_heading],
         acceleration: robot[:acceleration],
+        distance: robot[:distance],
         position: my_future_position,
         time: time
       }
@@ -975,7 +976,8 @@ class Kubota
       if robot[:latest]
         diff = distance(robot[:point], point)
         speed = diff / (time - robot[:latest])
-        heading = to_direction(robot[:point], point)
+        heading = robot[:heading]
+        heading = to_direction(robot[:point], point) if !heading or speed > 0.001
         if robot[:speed]
           robot[:acceleration] = {
             speed: (speed - robot[:speed]) / (time - robot[:latest]),
@@ -1003,15 +1005,18 @@ class Kubota
       robot[:fire_logs].reverse.each do |fire_log|
         diff_ticks = time - fire_log[:time]
         if (diff_ticks * BULLET_SPPED - scanned[:distance]).abs < HIT_RANGE * 1.1
-          robot[:statistics] << {
-            time: fire_log[:time],
-            prospect_heading: robot[:prospect_heading],
-            prospect_speed: robot[:prospect_speed],
-            acceleration: robot[:acceleration],
-            heading: to_direction(fire_log[:point], robot[:prospect_point]),
-            speed: distance(fire_log[:point], robot[:prospect_point]) / diff_ticks
-          }
-          break
+          if !robot[:statistics].last or robot[:statistics].last[:time] != fire_log[:time]
+            robot[:statistics] << {
+              time: fire_log[:time],
+              prospect_heading: robot[:prospect_heading],
+              prospect_speed: robot[:prospect_speed],
+              acceleration: robot[:acceleration],
+              heading: to_direction(fire_log[:point], robot[:prospect_point]),
+              speed: distance(fire_log[:point], robot[:prospect_point]) / diff_ticks,
+              distance: fire_log[:distance],
+            }
+            break
+          end
         end
         break if diff_ticks * BULLET_SPPED > scanned[:distance]
       end

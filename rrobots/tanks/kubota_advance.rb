@@ -106,26 +106,39 @@ class KubotaAdvance < Kubota
 
   def prospect_next_by_simple(robot)
     return prospect_next_by_acceleration(robot) if !robot[:statistics] or !robot[:acceleration]
-    if @nearst_log == nil
+    if @nearest == nil
       acceleration = {}
-      @nearst_log = robot[:statistics].min do |a, b|
-        diff_a = (robot[:speed] - a[:speed]) ** 2 + (robot[:speed] - a[:acceleration][:speed]) ** 2 + (robot[:acceleration][:heading] - a[:acceleration][:heading]) ** 2
-        diff_b = (robot[:speed] - b[:speed]) ** 2 + (robot[:speed] - b[:acceleration][:speed]) ** 2 + (robot[:acceleration][:heading] - b[:acceleration][:heading]) ** 2
-        diff_a <=> diff_b
+      robot[:statistics].each do |a|
+        a[:s] = ((robot[:speed] - a[:speed]) ** 2) * 1.5 + ((robot[:distance] - a[:distance]) ** 2) + ((robot[:speed] - a[:acceleration][:speed]) ** 2) + ((robot[:acceleration][:heading] - a[:acceleration][:heading]) ** 2)
       end
+      # @nearest = robot[:statistics].min do |a, b|
+      #   a[:s] <=> b[:s]
+      # end
+      nearest_logs = robot[:statistics].sort{|a, b| a[:s] <=> b[:s]}.first(10)
+      nearest_logs.each do |l1|
+        l1[:s] = 0
+        nearest_logs.each do |l2|
+          if l1 != l2
+            l1[:s] += (l1[:speed] - l2[:speed]) ** 2 + (l1[:heading] - l2[:heading]) ** 2
+          end
+        end
+      end
+      @nearest = nearest_logs.min {|a, b| a[:s] <=> b[:s]}
     end
-    return prospect_next_by_acceleration(robot) unless @nearst_log
-    diff_heading = diff_direction(@nearst_log[:prospect_heading], robot[:prospect_heading])
+    return prospect_next_by_acceleration(robot) unless @nearest
+
+    diff_heading = diff_direction(@nearest[:prospect_heading], robot[:prospect_heading])
     target_future = {
       latest: robot[:latest],
-      speed: @nearst_log[:speed],
-      heading: (@nearst_log[:heading] - diff_heading),
-      prospect_speed: @nearst_log[:speed],
-      prospect_heading: (@nearst_log[:heading] - diff_heading),
+      speed: @nearest[:speed],
+      heading: (@nearest[:heading] - diff_heading),
+      prospect_speed: @nearest[:speed],
+      prospect_heading: (@nearest[:heading] - diff_heading),
       prospect_point: robot[:prospect_point],
       acceleration: { speed: 0, heading: 0 },
       logs: [],
     }
+
     return prospect_next_by_acceleration(target_future)
   end
 
@@ -190,12 +203,6 @@ class KubotaAdvance < Kubota
   end
 
   def move_enemy_bullets_bullet_type(robot, bullet, bullet_type_context)
-    # TODO
-    # if bullet_type_context[:total] < 5
-    #   bullet_type_context[:bullet_type] = :unknown
-    # elsif (1.0 * bullet_type_context[:hit] / bullet_type_context[:total]) <= 0.5
-    #   bullet_type_context[:bullet_type] = :unknown
-    # end
     if bullet_type_context[:bullet_type] == :unknown
       robot[:unknown_bullet] = bullet if !robot[:unknown_bullet] or !robot[:unknown_bullet][:unknown]
     else
@@ -260,7 +267,7 @@ class KubotaAdvance < Kubota
     font_color color
 
     @replay_point = nil
-    @nearst_log = nil
+    @nearest = nil
     @robots.values.each do |robot|
       robot[:unknown_bullet] = nil
     end
