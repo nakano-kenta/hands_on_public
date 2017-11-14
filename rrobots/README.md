@@ -50,6 +50,9 @@ https://github.com/logankoester/rrobots
 ## Master4(700x700)
 50. Get 4500 score in 10 games against RandomCrawler
 
+## Master4(1000x1000)
+60. Get 4500 score in 10 games against Reaction
+
 ## Nightmare1(700x700)
 500. Win score in 10 games against Kubota (勝てるもんなら勝ってみろ！！)
 
@@ -87,6 +90,25 @@ https://github.com/logankoester/rrobots
 * **turn** - turns the robot (and the gun and the radar), max 10 degrees per tick
 * **turn_gun** - turns the gun (and the radar), max 30 degrees per tick
 * **turn_radar** - turns the radar, max 60 degrees per tick
+
+## Robot auto & callback I/F
+* **enable_callbacks** - Enable callback I/F
+* **enable_callbacks** - Enable callback I/F
+* **scanned** - Callback with `events['robot_scanned']` when scanned some robots
+* **crashed_into_enemy** - Callback with `events['crash_into_enemy']` when crashed into enemies
+* **crashed_into_wall** - Callback with `events['crash_into_wall']` when crashed into wall
+* **hit** - Callback with `events['hit']` when hit my bullets
+* **got_hit** - Callback with `events['crash']` when got hit by someone's bullets
+* **turned** - Callback when finished `auto_turn`
+* **accelerated** - Callback when finished `auto_accelerate`
+* **stopped** - Callback when finished `auto_stop`
+* **gun_turned** - Callback when finished `auto_turn_gun`
+* **radar_turned** - Callback when finished `auto_turn_radar`
+* **auto_turn** - Turn the robot by specified angle automatically, will callback `turned` when finished
+* **auto_accelerate** - Accelerate robot during specified ticks, will callback `accelerated` when finished
+* **auto_stop** - Stop robot automatically, will callback `stopped` when finished
+* **auto_turn_gun** - Turn the gun by specified angle automatically, will callback `gun_turned` when finished
+* **auto_turn_radar** - Turn the radar by specified angle automatically, will callback `radar_turned` when finished
 
 ## Robot storage
 * **durable_context** - durable context among all matches

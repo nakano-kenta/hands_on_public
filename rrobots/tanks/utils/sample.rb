@@ -97,6 +97,7 @@ module SampleUtil
       @scanned_by_name[scanned[:name]][:latest] = time
       @scanned_by_name[scanned[:name]][:direction] = scanned[:direction]
       @scanned_by_name[scanned[:name]][:distance] = scanned[:distance]
+      @scanned_by_name[scanned[:name]][:energy] = scanned[:energy]
     }
     @scanned_by_name.each do |name, scanned|
       next unless scanned

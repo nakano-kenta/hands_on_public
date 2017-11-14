@@ -3,7 +3,7 @@ require 'securerandom'
 class RobotRunner
 
   STATE_IVARS = [ :x, :y, :gun_heat, :heading, :gun_heading, :radar_heading, :time, :size, :speed, :energy, :team ]
-  NUMERIC_ACTIONS = [ :fire, :turn, :turn_gun, :turn_radar, :accelerate ]
+  NUMERIC_ACTIONS = [ :fire, :turn, :turn_gun, :turn_radar, :accelerate]
   STRING_ACTIONS = [ :say, :broadcast ]
   STYLES = [ :font_color, :body_color, :turret_color, :radar_color ]
 
@@ -261,6 +261,7 @@ class RobotRunner
   def robot_tick
     unless zonbi?
       @robot.tick @robot.events
+      @robot.auto @robot.events
     end
     @events.clear
   end
