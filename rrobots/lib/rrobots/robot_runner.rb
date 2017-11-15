@@ -46,6 +46,8 @@ class RobotRunner
   attr_accessor :prev_x
   attr_accessor :prev_y
   attr_accessor :prev_speed
+  attr_accessor :num_fire
+  attr_accessor :num_hit
 
   def initialize robot, bf, team, options
     @robot = robot
@@ -57,6 +59,8 @@ class RobotRunner
     @actions = Hash.new(0)
     @robot.styles = Hash.new(0)
     @robot.before_start if @robot.respond_to? :before_start
+    @num_fire = 0
+    @num_hit = 0
   end
 
   def skin_prefix
@@ -115,6 +119,7 @@ class RobotRunner
       damage: damage,
     }
     if !bullet.origin.dead
+      bullet.origin.num_hit += 1
       bullet.origin.energy += damage * 2/3
       bullet.origin.events['hit'] << {
         to: uniq_name,
@@ -270,6 +275,7 @@ class RobotRunner
     return if zonbi?
     @actions[:fire] = (@energy - 0.1) if @actions[:fire] > @energy
     if (@actions[:fire] > 0) && (@gun_heat == 0)
+      @num_fire += 1
       bullet = Bullet.new(@battlefield, @x, @y, @gun_heading, 30, @actions[:fire]*3.3 , self)
       3.times{bullet.tick}
       @battlefield << bullet

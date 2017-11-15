@@ -63,7 +63,7 @@ class RRobotsGameWindow < Gosu::Window
   def simulate(ticks=1)
     @explosions.reject!{|e,tko| e.dead }
     @bullets.reject!{|b,tko| b.dead }
-    @robots.reject! { |ai,tko| ai.dead}
+    # @robots.reject! { |ai,tko| ai.dead}
     ticks.times do
       if @battlefield.game_over
         @on_game_over_handlers.each{|h| h.call(@battlefield) }

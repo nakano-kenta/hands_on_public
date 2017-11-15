@@ -204,9 +204,14 @@ class KubotaAdvance < Kubota
 
   def move_enemy_bullets_bullet_type(robot, bullet, bullet_type_context)
     if bullet_type_context[:bullet_type] == :unknown
-      robot[:unknown_bullet] = bullet if !robot[:unknown_bullet] or !robot[:unknown_bullet][:unknown]
+      if @lockon_target == robot
+        robot[:unknown_bullet] = bullet if !robot[:unknown_bullet] or !robot[:unknown_bullet][:unknown]
+      else
+        bullet_type_context[:bullet_type] = :direct
+        super(robot, bullet, bullet_type_context)
+      end
     else
-      super
+      super(robot, bullet, bullet_type_context)
     end
   end
 
@@ -231,7 +236,8 @@ class KubotaAdvance < Kubota
     @robots.each do |name, robot|
       if robot[:unknown_bullet] and !robot[:unknown_bullet][:unknown]
         bullet = robot[:unknown_bullet]
-        landing_ticks = distance(bullet[:point], position) / BULLET_SPPED
+        distance_to_bullet = distance(bullet[:point], position)
+        landing_ticks = distance_to_bullet / BULLET_SPPED
         bullet_direction = to_direction(position, bullet[:start])
         move_direction = bullet_direction + 90
         ticks = landing_ticks.to_i
@@ -244,11 +250,12 @@ class KubotaAdvance < Kubota
         eval_wall to
         slope = 1 + (50.0 / landing_ticks)
         random = random_by_slope slope
-        # random = (SecureRandom.random_number < 0.5) ? 1.0 : 0
-        bullet[:unknown] = {
+        destination = {
           x: ((to[:x] - from[:x]) * random + from[:x]),
           y: ((to[:y] - from[:y]) * random + from[:y]),
         }
+        distance_to_bullet *= 0.95 if num_robots == 2 and @lockon_target and @lockon_target[:distance] > AGRESSIVE_DISTANCE and @lockon_target[:energy] < (energy / 2.0)
+        bullet[:unknown] = to_point(to_direction(bullet[:point], destination), distance_to_bullet, bullet[:point])
       end
     end
   end

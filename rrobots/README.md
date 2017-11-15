@@ -13,6 +13,11 @@ RUBYLIB=lib bundle exec ./bin/rrobots --resolution=1500,1500 tanks/simple.rb tan
 https://github.com/logankoester/rrobots
 
 # Study
+## Set my robot
+```
+ex > export MY_ROBOT=tanks/my_robot.rb
+```
+
 ## Entry level (700x700)
 1. Win 9 games in 10 games against Simple
    Need to turn gun effectively.
@@ -20,6 +25,13 @@ https://github.com/logankoester/rrobots
    Need move to avoid getting hit.
 3. Win 9 games in 10 games against QuickShooter
    Need move to avoid getting hit.
+
+```
+1. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/simple --no-gui
+2. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/shooter --no-gui
+3. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/quick_shooter --no-gui
+```
+
 
 ## Basic level(700x700)
 10. Get 4500 score in 10 games against Aiming
@@ -31,36 +43,90 @@ https://github.com/logankoester/rrobots
 13. Get 4500 score in 10 games against Swing
    Need to aim patterned moving targets.
 
+```
+10. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/aiming --no-gui
+11. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/wall --no-gui
+12. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/circle --no-gui
+13. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/swing --no-gui
+```
+
 ## Advansed level(700x700)
 20. Get 4500 score in 10 games against WallShooter
 21. Get 4500 score in 10 games against CircleShooter
 22. Get 4500 score in 10 games against SwingShooter
 
+```
+20. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/wall_shooter --no-gui
+21. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/circle_shooter --no-gui
+22. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/swing_shooter --no-gui
+```
+
 ## Master1(1000x1000)
 23. Get 5500 score in 10 games against WallShooter, CircleShooter and SwingShooter
+
+```
+23. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1000,1000 $MY_ROBOT tanks/wall_shooter tanks/circle_shooter tanks/swing_shooter --no-gui
+```
 
 ## Master2(700x700)
 31. Get 4500 score in 10 games against WallWithAiming
 32. Get 4500 score in 10 games against CircleWithAiming
 33. Get 4500 score in 10 games against SiwingWithAiming
 
+```
+30. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/wall_with_aiming --no-gui
+31. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/circle_with_aiming --no-gui
+32. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/swing_with_aiming --no-gui
+```
+
 ## Master3(1000x1000)
 34. Get 5000 score in 10 games against WallWithAiming, CircleWithAiming and SwingWithAiming
+
+```
+34. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1000,1000 $MY_ROBOT tanks/wall_with_aiming tanks/circle_with_aiming tanks/swing_with_aiming --no-gui
+```
 
 ## Master4(700x700)
 50. Get 4500 score in 10 games against RandomCrawler
 
-## Master4(1000x1000)
-60. Get 4500 score in 10 games against Reaction
+```
+50. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/random_crawler --no-gui
+```
+
+## Master5(1000x1000)
+60. Get 2500 score in 10 games against Reaction
+
+```
+60. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1000,1000 $MY_ROBOT tanks/reaction --no-gui
+```
+
+## Master5(1000x1000)
+100. Get 6000 score in 10 games against All sample robots
+
+```
+100. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=3000,3000 $MY_ROBOT tanks/simple tanks/shooter tanks/quick_shooter tanks/wall_shooter tanks/circle_shooter tanks/swing_shooter tanks/wall_with_aiming tanks/circle_with_aiming tanks/swing_with_aiming tanks/reaction tanks/random_crawler --no-gui
+```
 
 ## Nightmare1(700x700)
-500. Win score in 10 games against Kubota (勝てるもんなら勝ってみろ！！)
+500. Win by score in 10 games against Kubota (勝てるもんなら勝ってみろ！！)
+
+```
+500. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/kubota --no-gui
+```
 
 ## Nightmare2(1000x1000)
-600. Win score in 20 games against Kubota (勝てるもんなら勝ってみろ！！)
+600. Win by score in 20 games against Kubota (勝てるもんなら勝ってみろ！！)
+
+```
+600. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1000,1000 $MY_ROBOT tanks/kubota --no-gui
+```
 
 ## Hell(1500x1500)
 777. Win score in 20 games against KubotaAdvance
+
+```
+777. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1000,1000 $MY_ROBOT tanks/kubota_advance --no-gui
+```
 
 # Robot interface
 ## Definitions

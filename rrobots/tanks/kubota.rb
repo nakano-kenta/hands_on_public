@@ -177,11 +177,14 @@ class Kubota
   include Util
 
   SAFETY_DISTANCE = 500.freeze
+  AGRESSIVE_DISTANCE = 1000.freeze
+  PASSIVE_DISTANCE = 1500.freeze
   NUM_FIRE_LOGS = 200.freeze
   NUM_HIT_LOGS = 1000.freeze
   NUM_GOT_HIT_LOGS = 200.freeze
   NUM_LOGS = 1500.freeze
   DYING_ENERGY = 1.0.freeze
+  DANGER_ENERGY = 10.0.freeze
 
   def before_start
     @debug_msg = false
@@ -408,6 +411,8 @@ class Kubota
   RAM_MULTI = 1.freeze
   CLOSING_FOR_RAM_ALPHA = -1000.freeze
   CLOSING_FOR_RAM_MULTI = 0.freeze
+  CLOSING_ALPHA = -10.freeze
+  CLOSING_MULTI = 0.freeze
   def move_by_anti_gravity_enemy_bullets(vectors, bullet)
     return unless bullet[:warning]
     10.times.each do |i|
@@ -463,6 +468,15 @@ class Kubota
       target = @robots.values.max{|a, b| a[:latest] <=> b[:latest] }
       set_destination(target[:prospect_point])
     else
+      if num_robots == 2 and energy < DANGER_ENERGY and @lockon_target and @lockon_target[:distance] > AGRESSIVE_DISTANCE and @lockon_target[:energy] < DANGER_ENERGY
+        put_anti_gravity_point 0, @lockon_target[:prospect_point], battlefield_width + battlefield_height, CLOSING_ALPHA, CLOSING_MULTI
+      end
+      if num_robots == 2 and @lockon_target and @lockon_target[:distance] > AGRESSIVE_DISTANCE and @lockon_target[:energy] < (energy / 2.0)
+        put_anti_gravity_point 0, @lockon_target[:prospect_point], battlefield_width + battlefield_height, CLOSING_ALPHA, CLOSING_MULTI
+      end
+      if @lockon_target and @lockon_target[:distance] > PASSIVE_DISTANCE and @lockon_target[:energy] < (energy * 2.0)
+        put_anti_gravity_point 0, @lockon_target[:prospect_point], battlefield_width + battlefield_height, CLOSING_ALPHA, CLOSING_MULTI
+      end
       move_by_anti_gravity
     end
   end
@@ -547,22 +561,12 @@ class Kubota
 
   TOTALLY_HIT_RANGE = 240.freeze
   ZOMBI_ENERGY = 0.3.freeze
-  def fire_with_logging(n, robot)
-    if @gun_heat == 0
-      if @energy < 10
-        if @lockon_target and @lockon_target[:distance] < TOTALLY_HIT_RANGE
-          n = 3
-        else
-          if num_robots > 2 or !@lockon_target or @lockon_target[:energy] >= ZOMBI_ENERGY
-            return if @energy < 1
-          end
-          n = [n, @energy / 2].min
-        end
-      end
-      fire n
+  def fire_with_logging(power, robot)
+    if gun_heat == 0 and @lockon_target and power > 0
+      fire power
       if @debug_attack
         log_by_aim_type = log_by_aim_type @lockon_target, 100
-        line = "Fire(#{n}) : #{robot[:aim_type]}  [ "
+        line = "Fire(#{power}) : #{robot[:aim_type]}  [ "
         aim_types.each do |aim_type|
           log_by_aim_type[aim_type] ||= {hit: 0, ratio: 0}
           line += "#{aim_type}: #{log_by_aim_type[aim_type][:hit]}, "
@@ -664,6 +668,7 @@ class Kubota
     return unless @status == :lockon
     if @lockon_target and (time - @lockon_start) > 4
       power = (@lockon_target[:energy] + 0.1)/FIRE_POWR_RATIO
+      power = [power, 0.1].min if @lockon_target[:distance] > PASSIVE_DISTANCE
       if num_robots == 2
         if @lockon_target[:energy] < DYING_ENERGY
           if @lockon_target[:distance] > SAFETY_DISTANCE
@@ -696,6 +701,19 @@ class Kubota
         power = [0.5, power].min
       end
 
+      if energy < DANGER_ENERGY
+        if @lockon_target[:distance] < TOTALLY_HIT_RANGE
+          power = 3
+        elsif @lockon_target[:energy] <= ZOMBI_ENERGY
+        else
+          if @lockon_target[:distance] > AGRESSIVE_DISTANCE
+            power = 0
+          end
+          power = [power, energy / 2].min
+        end
+      else
+        power = 3 if @lockon_target[:distance] < TOTALLY_HIT_RANGE
+      end
       say "Aiming #{@lockon_target[:aim_type]}"
       aim power
     end
@@ -743,7 +761,7 @@ class Kubota
       next unless robot[:acceleration]
       delta_energy = robot[:acceleration][:energy] + robot[:hit]
       robot[:hit] = 0
-      if -0.1 > delta_energy and delta_energy >= -3
+      if 0 > delta_energy and delta_energy >= -3
         crash = @robots.values.reject{|other| robot == other}.any? do |other|
           r = distance(robot[:prospect_point], other[:prospect_point]) < @size * 2.2
         end
@@ -785,7 +803,6 @@ class Kubota
   def move_enemy_bullets_bullet_type(robot, bullet, bullet_type_context)
     if bullet_type_context[:bullet_type] == :unknown
       if (distance(bullet[:point], position) / BULLET_SPPED) < WARNING_BULLET_TICKS
-        robot[:direction]
         left_or_right @heading, robot[:direction] do |direction, diff|
           put_anti_gravity_point 0, to_point(direction, 50, position), battlefield_width + battlefield_height, UNKNOWN_BULLET_ALPHA, UNKNOWN_BULLET_MULTI
         end
@@ -876,9 +893,13 @@ class Kubota
   end
 
   def set_lockon_mode
-    target = @robots.values.select{|a| time - a[:latest] <= 8}.sort{|a, b| a[:distance] <=> b[:distance] }.first
+    target = @robots.values.select{|a|
+      time - a[:latest] <= 8
+    }.sort{|a, b|
+      ((a[:energy] < ZOMBI_ENERGY) ? 0 : a[:distance]) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : b[:distance])
+    }.first
     if target
-      if num_robots == 2 and target[:energy] < ZOMBI_ENERGY and energy > 8
+      if num_robots == 2 and target[:energy] < ZOMBI_ENERGY and energy > 8.1
         set_ram_attack_mode
       elsif @lockon_target != target or @status != :lockon
         @lockon_target = target

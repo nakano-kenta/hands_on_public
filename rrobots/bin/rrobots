@@ -10,7 +10,7 @@ class OptionsParser
     options.match = Time.now.to_i + Process.pid
     options.gui = true
     options.timeout = 5000
-    options.teams = 8
+    options.teams = 100
 
     opts = OptionParser.new do |opts|
       opts.banner = "Usage: rrobots [options] file1 file2 ..."
@@ -28,7 +28,7 @@ class OptionsParser
       end
 
       opts.on("--teams N", Integer, "Splits robots into N teams") do |n|
-        options.teams = n if n > 0 && n < 8
+        options.teams = n if n > 0 && n < 100
       end
 
       opts.on("--[no-]gui", "Run the match with the GUI") do |y|
@@ -157,11 +157,11 @@ def vertical_format(line, offset, adding)
   line.concat (offset - line.length).times.map {' '}.join + adding
 end
 
-def print_results(head, results, summaries = nil)
+def print_results(head, results, summaries = nil, with_score = false)
   puts head
   results.each_slice(4) do |results|
     offset = 0
-    lines = Array.new(11){''}
+    lines = Array.new(13){''}
     results.each do |result|
       vertical_format lines[0], offset, "#{result[:name]}:"
       vertical_format lines[1], offset, "    score:               #{'%.1f' % result[:score]}"
@@ -171,11 +171,24 @@ def print_results(head, results, summaries = nil)
       vertical_format lines[5], offset, "    damage_taken:        #{'%.1f' % result[:damage_taken]}"
       vertical_format lines[6], offset, "    bullet_damage_given: #{'%.1f' % result[:bullet_damage_given]}"
       vertical_format lines[7], offset, "    bullet_damage_taken: #{'%.1f' % result[:bullet_damage_taken]}"
-      vertical_format lines[8], offset, "    ram_damage_given:    #{'%.1f' % result[:ram_damage_given]}"
-      vertical_format lines[9], offset, "    ram_damage_taken:    #{'%.1f' % result[:ram_damage_taken]}"
-      vertical_format lines[10], offset,"    ram_kills:           #{result[:ram_kills]}"
-      offset += 32
+      vertical_format lines[8], offset, "    bullet_hit:          #{'%d' % result[:num_hit]}"
+      vertical_format lines[9], offset, "    bullet_hit_ratio:    #{'%.1f%%' % (100.0 * result[:num_hit] / result[:num_fire])}"
+      vertical_format lines[10], offset, "    ram_damage_given:    #{'%.1f' % result[:ram_damage_given]}"
+      vertical_format lines[11], offset, "    ram_damage_taken:    #{'%.1f' % result[:ram_damage_taken]}"
+      vertical_format lines[12], offset,"    ram_kills:           #{result[:ram_kills]}"
+      offset += 34
+      if with_score
+        scores = score result
+        vertical_format lines[0], offset, " (score)"
+        vertical_format lines[2], offset, " #{'(%.1f)' % scores[:win]}"
+        vertical_format lines[3], offset, " #{'(%.1f)' % scores[:kills]}"
+        vertical_format lines[6], offset, " #{'(%.1f)' % scores[:bullet_damage_given]}"
+        vertical_format lines[10], offset, " #{'(%.1f)' % scores[:ram_damage_given]}"
+        vertical_format lines[12], offset," #{'(%.1f)' % scores[:ram_kills]}"
+        offset += 12
+      end
       if summaries
+        vertical_format lines[0], offset, " / all"
         vertical_format lines[1], offset, " / #{'%.1f' % summaries[result[:name]][:score]}"
         vertical_format lines[2], offset, " / #{summaries[result[:name]][:win]}"
         vertical_format lines[3], offset, " / #{summaries[result[:name]][:kills]}"
@@ -183,15 +196,27 @@ def print_results(head, results, summaries = nil)
         vertical_format lines[5], offset, " / #{'%.1f' % summaries[result[:name]][:damage_taken]}"
         vertical_format lines[6], offset, " / #{'%.1f' % summaries[result[:name]][:bullet_damage_given]}"
         vertical_format lines[7], offset, " / #{'%.1f' % summaries[result[:name]][:bullet_damage_taken]}"
-        vertical_format lines[8], offset, " / #{'%.1f' % summaries[result[:name]][:ram_damage_given]}"
-        vertical_format lines[9], offset, " / #{'%.1f' % summaries[result[:name]][:ram_damage_taken]}"
-        vertical_format lines[10], offset," / #{'%.1f' % summaries[result[:name]][:ram_kills]}"
+        vertical_format lines[8], offset, " / #{'%d' % summaries[result[:name]][:num_hit]}"
+        vertical_format lines[9], offset, " / #{'%.1f%%' % (100.0 * summaries[result[:name]][:num_hit] / summaries[result[:name]][:num_fire])}"
+        vertical_format lines[10], offset, " / #{'%.1f' % summaries[result[:name]][:ram_damage_given]}"
+        vertical_format lines[11], offset, " / #{'%.1f' % summaries[result[:name]][:ram_damage_taken]}"
+        vertical_format lines[12], offset," / #{'%.1f' % summaries[result[:name]][:ram_kills]}"
         offset += 12
       end
     end
     puts lines.join "\n"
     puts
   end
+end
+
+def score(result)
+  {
+    win: result[:win] * 200,
+    kills: result[:kills] * 50,
+    bullet_damage_given: result[:bullet_damage_given] * 2,
+    ram_damage_given: result[:ram_damage_given] * 3,
+    ram_kills: result[:ram_kills] * 100,
+  }
 end
 
 def match(summaries, options, robots, match_no)
@@ -206,16 +231,19 @@ def match(summaries, options, robots, match_no)
     result = {
       win: (!robot.dead ? 1 : 0),
       name: robot.uniq_name,
-      score: (!robot.dead ? 1 : 0) * 200 + (robot.kills * 50) + (robot.bullet_damage_given + (robot.ram_damage_given * 1.5)) * 2 + (robot.ram_kills * 100),
       kills: robot.kills,
       damage_given: robot.damage_given,
       damage_taken: robot.damage_taken,
       bullet_damage_given: robot.bullet_damage_given,
       bullet_damage_taken: robot.bullet_damage_taken,
+      num_hit: robot.num_hit,
+      num_fire: robot.num_fire,
       ram_damage_given: robot.ram_damage_given,
       ram_damage_taken: robot.ram_damage_taken,
       ram_kills: robot.ram_kills,
     }
+    result[:score] = score(result).values.inject(:+)
+
     if summaries[robot.uniq_name]
       result.each do |k , v|
         unless v.instance_of? String
@@ -245,6 +273,6 @@ match_no = 0
     match(summaries, options, robots, match_no)
   end
 end
-print_results('=== Finally ===', summaries.values.sort{|a, b| b[:score] <=> a[:score]})
+print_results('=== Finally ===', summaries.values.sort{|a, b| b[:score] <=> a[:score]}, nil, true)
 
 exit 0
