@@ -100,11 +100,18 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 60. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1000,1000 $MY_ROBOT tanks/reaction --no-gui
 ```
 
-## Master5(1000x1000)
+## Battle royale(3000x3000)
 100. Get 6000 score in 10 games against All sample robots
 
 ```
 100. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=3000,3000 $MY_ROBOT tanks/simple tanks/shooter tanks/quick_shooter tanks/wall_shooter tanks/circle_shooter tanks/swing_shooter tanks/wall_with_aiming tanks/circle_with_aiming tanks/swing_with_aiming tanks/reaction tanks/random_crawler --no-gui
+```
+
+## Ace1(1500x1500)
+200. Win by score in 10 games against circle_shooter, swing_shooter and wall_shooter team.
+
+```
+200. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_shooter tanks/swing_shooter tanks/wall_shooter --teams=1
 ```
 
 ## Nightmare1(700x700)
@@ -120,6 +127,14 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 ```
 600. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1000,1000 $MY_ROBOT tanks/kubota --no-gui
 ```
+# Ace2(1500x1500)
+700. Win by score in 10 games against circle_aiming, reaction and random_crawler team.
+701. Win by score in 10 games against circle_aiming, swing_aiming and wall_aiming team.
+
+```
+700. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/reaction tanks/random_crawler --teams=1
+701. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_with_aiming tanks/swing_with_aiming tanks/wall_with_aiming --teams=1
+```
 
 ## Hell(1500x1500)
 777. Win score in 20 games against KubotaAdvance
@@ -127,6 +142,7 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 ```
 777. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1000,1000 $MY_ROBOT tanks/kubota_advance --no-gui
 ```
+
 
 # Robot interface
 ## Definitions

@@ -247,11 +247,11 @@ def score(result)
   {
     win: result[:win] * 200,
     kills: result[:kills] * 50,
-    friend_kills: result[:kills] * -50,
+    friend_kills: result[:friend_kills] * -50,
     bullet_damage_given: result[:bullet_damage_given] * 2,
     ram_damage_given: result[:ram_damage_given] * 3,
     ram_kills: result[:ram_kills] * 100,
-    friend_ram_kills: result[:ram_kills] * -100,
+    friend_ram_kills: result[:friend_ram_kills] * -100,
   }
 end
 
@@ -289,7 +289,7 @@ def match(summary, options, robots, match_no)
     team_name = "Team_#{robot.team}"
     if team_results[team_name]
       result.each do |k , v|
-        unless v.instance_of? String
+        unless v.instance_of? String or v.instance_of? Array
           team_results[team_name][k] += v
         end
       end
@@ -298,6 +298,7 @@ def match(summary, options, robots, match_no)
     end
     team_results[team_name][:name] = team_name
     team_results[team_name][:win] = 1 if team_results[team_name][:win] > 0
+    team_results[team_name][:score] = score(team_results[team_name]).values.inject(:+)
     team_results[team_name][:members] ||= []
     team_results[team_name][:members] << robot.uniq_name
 

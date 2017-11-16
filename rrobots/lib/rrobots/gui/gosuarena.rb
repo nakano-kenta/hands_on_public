@@ -63,20 +63,19 @@ class RRobotsGameWindow < Gosu::Window
   def simulate(ticks=1)
     @explosions.reject!{|e,tko| e.dead }
     @bullets.reject!{|b,tko| b.dead }
-    # @robots.reject! { |ai,tko| ai.dead}
     ticks.times do
       if @battlefield.game_over
         @on_game_over_handlers.each{|h| h.call(@battlefield) }
-          winner = @robots.keys.first
-          whohaswon = if winner.nil?
-            "Draw!"
-          elsif @battlefield.teams.all?{|k,t|t.size<2}
-            "#{winner.uniq_name} won!"
-          else
-            "Team #{winner.team_members.map(&:uniq_name).join " "} won!"
-          end
-          text_color = winner ? winner.team : 7
-          @font.draw_rel("#{whohaswon}", xres/2, yres/2, ZOrder::UI, 0.5, 0.5, 1, 1, 0xffffff00)
+        winner = @robots.reject{ |ai,tko| ai.dead}.keys.first
+        whohaswon = if winner.nil?
+                      "Draw!"
+                    elsif @battlefield.teams.all?{|k,t|t.size<2}
+                      "#{winner.uniq_name} won!"
+                    else
+                      "Team #{winner.team_members.map(&:uniq_name).join " "} won!"
+                    end
+        text_color = winner ? winner.team : 7
+        @font.draw_rel("#{whohaswon}", xres/2, yres/2, ZOrder::UI, 0.5, 0.5, 1, 1, 0xffffff00)
       else
         @battlefield.tick
       end

@@ -41,9 +41,10 @@ class Reaction
   end
 
   def scanned(robots)
+    robot = robots.reject{|a| team_members.include? a[:name]}.first
+    return unless robot
     @turn_radar_angle *= -1
     auto_turn_radar @turn_radar_angle
-    robot = robots.first
     @enemy_direction = robot[:direction]
     if @enemy_energy.to_f > robot[:energy]
       turn_angle = (@enemy_direction + 90 - heading) % 360
