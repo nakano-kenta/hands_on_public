@@ -9,6 +9,13 @@ bundle install
 RUBYLIB=lib bundle exec ./bin/rrobots --resolution=1500,1500 tanks/simple.rb tanks/simple.rb
 ```
 
+# Team battle rule
+```
+1. Leader robot's energy is 2.0 times.
+2. Bot's energy is 1.5 times, but they don't have radar.
+   So you need to tell them information from other Robot.
+```
+
 # Based on
 https://github.com/logankoester/rrobots
 
@@ -101,17 +108,33 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 ```
 
 ## Battle royale(3000x3000)
-100. Get 6000 score in 10 games against All sample robots
+100. Get 8000 score in 10 games against All sample robots
 
 ```
 100. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=3000,3000 $MY_ROBOT tanks/simple tanks/shooter tanks/quick_shooter tanks/wall_shooter tanks/circle_shooter tanks/swing_shooter tanks/wall_with_aiming tanks/circle_with_aiming tanks/swing_with_aiming tanks/reaction tanks/random_crawler --no-gui
 ```
 
-## Ace1(1500x1500)
-200. Win by score in 10 games against circle_shooter, swing_shooter and wall_shooter team.
+## Team1(2000x2000)
+200. Get 8000 score in 10 games against All sample robots
 
 ```
-200. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_shooter tanks/swing_shooter tanks/wall_shooter --teams=1
+200. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=2000,2000 $MY_ROBOT $MY_ROBOT2 $MY_ROBOT3 tanks/circle_shooter tanks/swing_shooter tanks/wall_shooter --teams=3 --no-gui
+```
+
+## Ace1(1500x1500)
+300. Win by score in 10 games using 3 unit (robots or bots) team against circle_shooter, swing_shooter and wall_shooter team.
+
+```
+300. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_shooter tanks/swing_shooter tanks/wall_shooter --teams=1 --no-gui
+```
+
+# Team2(2000x2000)
+400. Win by score in 10 games using 3 unit (robots or bots) team against circle_aiming, swing_aiming and wall_aiming team.
+401. Win by score in 10 games using 3 unit (robots or bots) team against 3 random_crawlers team.
+
+```
+400. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=2000,2000 $MY_ROBOT $MY_ROBOT1 $MY_ROBOT2 tanks/circle_with_aiming tanks/swing_with_aiming tanks/wall_with_aiming --teams=3 --no-gui
+402. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=2000,2000 $MY_ROBOT $MY_ROBOT1 $MY_ROBOT2 tanks/random_crawler tanks/random_crawler tanks/random_crawler --teams=3 --no-gui
 ```
 
 ## Nightmare1(700x700)
@@ -130,18 +153,26 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 # Ace2(1500x1500)
 700. Win by score in 10 games against circle_aiming, reaction and random_crawler team.
 701. Win by score in 10 games against circle_aiming, swing_aiming and wall_aiming team.
+701. Win by score in 10 games against 3 random_crawlers team.
 
 ```
-700. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/reaction tanks/random_crawler --teams=1
-701. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_with_aiming tanks/swing_with_aiming tanks/wall_with_aiming --teams=1
+700. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/reaction tanks/random_crawler --teams=1 --no-gui
+701. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/circle_with_aiming tanks/swing_with_aiming tanks/wall_with_aiming --teams=1 --no-gui
+702. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/random_crawler tanks/random_crawler tanks/random_crawler --teams=1 --no-gui
 ```
 
 ## Hell(1500x1500)
 777. Win score in 20 games against KubotaAdvance
 
 ```
-777. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1000,1000 $MY_ROBOT tanks/kubota_advance --no-gui
+777. RUBYLIB=lib bundle exec ./bin/rrobots --match=20 --resolution=1500,1500 $MY_ROBOT tanks/kubota_advance --no-gui
 ```
+
+## Team(2000x2000)
+```
+999. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=2000,2000 $MY_ROBOT $MY_ROBOT1 $MY_ROBOT2 tanks/kubota_advance tanks/kubota_advance_bot tanks/kubota_advance_bot --teams=3 --no-gui
+```
+
 
 
 # Robot interface
@@ -191,6 +222,12 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 * **auto_stop** - Stop robot automatically, will callback `stopped` when finished
 * **auto_turn_gun** - Turn the gun by specified angle automatically, will callback `gun_turned` when finished
 * **auto_turn_radar** - Turn the radar by specified angle automatically, will callback `radar_turned` when finished
+
+## Team
+* **team** - Your team number
+* **team_members** - Your team member names
+* **name** - Your robot name
+* **team_message** - Send message to team_members, it will be recieved them as events['robot_scanned'].
 
 ## Robot storage
 * **durable_context** - durable context among all matches

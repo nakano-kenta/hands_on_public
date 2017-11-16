@@ -1,4 +1,5 @@
 module Robot
+  BOT = false.freeze
 
   def self.attr_state(*names)
     names.each{|n|

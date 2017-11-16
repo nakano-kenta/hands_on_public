@@ -1,4 +1,5 @@
 require 'rrobots/robot'
+require 'rrobots/bot'
 require 'rrobots/battlefield'
 require 'rrobots/explosion'
 require 'rrobots/bullet'

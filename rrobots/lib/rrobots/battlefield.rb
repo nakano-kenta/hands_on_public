@@ -10,9 +10,9 @@ class Battlefield
    attr_reader :timeout  # how many ticks the match can go before ending.
    attr_reader :game_over
 
-  def initialize width, height, timeout, match, slow
+  def initialize width, height, timeout, round, slow
     @width, @height = width, height
-    @match = match
+    @round = round
     @time = 0
     @robots = []
     @teams = Hash.new{|h,k| h[k] = [] }
@@ -37,7 +37,7 @@ class Battlefield
   end
 
   def before_start
-    puts "==== Match #{@match} start ==="
+    puts "==== Round #{@round} start ==="
     @teams.each do |team_name, robots|
       puts "#{team_name}: #{robots.map(&:uniq_name).join ' '}"
     end

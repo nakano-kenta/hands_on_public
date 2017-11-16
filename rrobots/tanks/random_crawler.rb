@@ -24,6 +24,7 @@ class RandomCrawler
       return
     end
 
+    @turn_angle ||= 0
     if (time % 40) == 0
       @turn_angle = 20 * SecureRandom.random_number - 10
     end

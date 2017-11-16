@@ -67,12 +67,20 @@ class RobotRunner
     @robot.styles = Hash.new(0)
     @num_fire = 0
     @num_hit = 0
+    if robot.class::BOT
+      @bot = true
+      @energy *= 1.5
+    end
   end
 
   def before_start
     @robot.team_members = @team_members.map(&:uniq_name)
     @robot.name = @uniq_name
     @robot.before_start if @robot.respond_to? :before_start
+    if @robot.team_members.first == uniq_name
+      @leader = true
+      @energy *= 2
+    end
   end
 
   def skin_prefix
@@ -107,8 +115,16 @@ class RobotRunner
   end
 
   def teleport(distance_x=(@battlefield.width/2)-@size*2, distance_y=(@battlefield.height/2)-@size*2)
-    @x += ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
-    @y += ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
+    10.times.each do
+      @x += ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
+      @y += ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
+      next if @battlefield.robots.any? do |robot|
+        unless robot.x == robot.prev_x
+          Math.hypot(robot.x - @x, robot.y - @y) < @size * 4
+        end
+      end
+      break
+    end
     @gun_heat = 3
     @heading = (SecureRandom.random_number * 360).to_i
     @gun_heading = @heading
@@ -377,6 +393,7 @@ class RobotRunner
   end
 
   def scan
+    return if @bot
     @battlefield.robots.each_with_index do |other, index|
       if (other != self) && (!other.dead)
         a = Math.atan2(@y - other.y, other.x - @x) / Math::PI * 180 % 360

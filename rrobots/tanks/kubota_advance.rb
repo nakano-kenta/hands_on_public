@@ -30,7 +30,7 @@ class KubotaAdvance < Kubota
   end
 
   def tick events
-    super
+    super events
   end
 
   private
@@ -254,8 +254,39 @@ class KubotaAdvance < Kubota
           x: ((to[:x] - from[:x]) * random + from[:x]),
           y: ((to[:y] - from[:y]) * random + from[:y]),
         }
-        distance_to_bullet *= 0.95 if num_robots == 2 and @lockon_target and @lockon_target[:distance] > AGRESSIVE_DISTANCE and @lockon_target[:energy] < (energy / 2.0)
+        distance_to_bullet *= 0.95 if last_enemy? and @lockon_target and @lockon_target[:distance] > AGRESSIVE_DISTANCE and @lockon_target[:energy] < (energy / 2.0)
         bullet[:unknown] = to_point(to_direction(bullet[:point], destination), distance_to_bullet, bullet[:point])
+      end
+    end
+  end
+
+  def set_lockon_mode(name = nil)
+    if name
+      super name
+    else
+      distance_a = 0
+      distance_b = 0
+      target = @robots.values.select{|a|
+        !a[:team] and time - a[:latest] <= 8
+      }.sort{|a, b|
+        team_members.each do |member_name|
+          member = @robots[member_name]
+          if member_name == name or !member
+            distance_a = a[:distance] / 2
+            distance_b = b[:distance] / 2
+          else
+            distance_a = distance(member[:prospect_point], a[:prospect_point])
+            distance_b = distance(member[:prospect_point], b[:prospect_point])
+          end
+        end
+        distance_a *= a[:energy] ** 0.5
+        distance_b *= b[:energy] ** 0.5
+        ((a[:energy] < ZOMBI_ENERGY) ? 0 : distance_a) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : distance_b)
+      }.first
+      if target
+        super target[:name]
+      else
+        super
       end
     end
   end

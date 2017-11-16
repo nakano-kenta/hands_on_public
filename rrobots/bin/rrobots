@@ -102,7 +102,7 @@ end
 
 def setup_battlefield(options, robots, round)
   @durable_context_by_name ||= {}
-  battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, options.match, options.slow
+  battlefield = Battlefield.new options.resolution[0]*2, options.resolution[1]*2, options.timeout, round, options.slow
 
   robots.each do |robot|
     robot_no = robot[1]
@@ -119,15 +119,18 @@ def setup_battlefield(options, robots, round)
       in_game_name = File.basename(robot[0]).sub(/\..*$/, '')
       in_game_name = in_game_name.split('_').map{|name| name[0] = name[0,1].upcase; name}.join
 
-
       team = 0
-      options.teams.inject(1) do |sum, team_size|
-        team_tail = (sum + team_size)
-        if robot_no < team_tail
-          break
+       if options.teams.length > 0
+        options.teams.inject(1) do |sum, team_size|
+          team_tail = (sum + team_size)
+          if robot_no < team_tail
+            break
+          end
+          team += 1
+          team_tail
         end
-        team += 1
-        team_tail
+      else
+        team = robot_no
       end
       robot = Object.const_get(in_game_name).new
       if options.gui
@@ -142,7 +145,7 @@ def setup_battlefield(options, robots, round)
       robotrunner.uniq_name = "#{in_game_name}_#{robot_no}"
       battlefield << robotrunner
     rescue Exception => error
-      puts 'Error loading ' + in_game_name + '!'
+      puts 'Error loading ' + in_game_name.to_s + '!'
       warn error
     end
     in_game_name
@@ -256,7 +259,7 @@ def score(result)
 end
 
 def match(summary, options, robots, match_no)
-  battlefield = setup_battlefield(options, robots, match_no+1)
+  battlefield = setup_battlefield(options, robots, match_no)
   if options.gui
     run_in_gui(battlefield, options.resolution[0], options.resolution[1])
   else
