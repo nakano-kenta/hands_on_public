@@ -31,15 +31,20 @@ class RobotRunner
 
   #keeps track of total damage done by this robot
   attr_accessor :damage_given
+  attr_accessor :friend_damage_given
   attr_accessor :damage_taken
   attr_accessor :bullet_damage_given
+  attr_accessor :friend_bullet_damage_given
   attr_accessor :bullet_damage_taken
   attr_accessor :ram_damage_given
+  attr_accessor :friend_ram_damage_given
   attr_accessor :ram_damage_taken
   attr_accessor :ram_kills
+  attr_accessor :friend_ram_kills
 
   #keeps track of the kills
   attr_accessor :kills
+  attr_accessor :friend_kills
 
   attr_reader :actions, :speech
 
@@ -85,14 +90,19 @@ class RobotRunner
     @size = 60
     @speed = 0
     @energy = 100
+    @kills = 0
+    @friend_kills = 0
     @damage_given = 0
+    @friend_damage_given = 0
     @damage_taken = 0
     @bullet_damage_given = 0
+    @friend_bullet_damage_given = 0
     @bullet_damage_taken = 0
     @ram_damage_given = 0
+    @friend_ram_damage_given = 0
     @ram_damage_taken = 0
     @ram_kills = 0
-    @kills = 0
+    @friend_ram_kills = 0
     teleport
   end
 
@@ -115,7 +125,7 @@ class RobotRunner
     @accelerate_min, @accelerate_max = -1, 1
     @teleport_min, @teleport_max = 0, 100
     @say_max = 256
-    @team_message_max = 256
+    @team_message_max = 65535
     @broadcast_max = 16
   end
 
@@ -210,19 +220,32 @@ class RobotRunner
           impact = Math.hypot(dy - other_dy, dx - other_dx)
           damage = impact_to_damage(impact)
           @energy -= damage
-          @ram_damage_taken += damage
-          @ram_damage_given += damage
           other.energy -= damage
+          if @team == other.team
+            @friend_ram_damage_given += damage
+            other.friend_ram_damage_given += damage
+            if other.dead
+              @friend_kills += 1
+              @friend_ram_kills += 1
+            end
+            if dead
+              other.friend_kills += 1
+              other.friend_ram_kills += 1
+            end
+          else
+            @ram_damage_given += damage
+            other.ram_damage_given += damage
+            if other.dead
+              @kills += 1
+              @ram_kills += 1
+            end
+            if dead
+              other.kills += 1
+              other.ram_kills += 1
+            end
+          end
+          @ram_damage_taken += damage
           other.ram_damage_taken += damage
-          other.ram_damage_given += damage
-          if other.dead
-            @kills += 1
-            @ram_kills += 1
-          end
-          if dead
-            other.kills += 1
-            other.ram_kills += 1
-          end
           @events['crash_into_enemy'] << {
             with: other.uniq_name,
             damage: damage
@@ -383,10 +406,12 @@ class RobotRunner
   def team_message
     @team_members.each do |other|
       if (other != self) && (!other.dead)
-        @events['team_messages'] << {
-          from: other.uniq_name,
-          message: other.actions[:team_message].to_s
-        }
+        if other.actions[:team_message] != 0
+          @events['team_messages'] << {
+            from: other.uniq_name,
+            message: other.actions[:team_message].to_s
+          }
+        end
       end
     end
   end

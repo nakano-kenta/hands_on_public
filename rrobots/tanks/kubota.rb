@@ -1,5 +1,6 @@
 require 'rrobots'
 
+
 module Coordinate
   def out_of_field?(point)
     point[:x] < 0 or point[:x] > battlefield_width or point[:y] < 0 or point[:y] > battlefield_height
@@ -200,7 +201,6 @@ class Kubota
   def tick events
     initial if time == 0
     initial_for_tick events
-
     team_message_received events['team_messages']
     robot_scanned events['robot_scanned']
     move_bullets
@@ -221,9 +221,14 @@ class Kubota
 
   def team_message_received(events)
     events.each do |event|
-      event = Marshal.load(event)
-      if event[:e] == :fire
-        @enemy_bullets << event[:d]
+      begin
+        data = Marshal.load(event[:message])
+        data[:d][:robot] = @robots[event[:from]]
+        if data[:e] == :fire and data[:d][:robot]
+          @enemy_bullets << data[:d]
+        end
+      rescue
+        # Squash
       end
     end
   end
@@ -596,10 +601,17 @@ class Kubota
       }
 
       @bullets << bullet
-      team_message Marshal.dump({
+      team_message Marshal.dump(
         e: :fire,
-        d: bullet
-      })
+        d: {
+          time: bullet[:time],
+          start: bullet[:start],
+          robot: nil,
+          point: bullet[:point],
+          heading: bullet[:heading],
+          speed: bullet[:speed],
+          aim_type: :team
+        })
 
       fire_with_logging_virtual_bullets(robot)
 
@@ -818,7 +830,7 @@ class Kubota
   UNKNOWN_BULLET_ALPHA = 10.freeze
   UNKNOWN_BULLET_MULTI = 1.freeze
   def move_enemy_bullets_bullet_type(robot, bullet, bullet_type_context)
-    if bullet_type_context[:bullet_type] != :team
+    if bullet[:aim_type] != :team
       if bullet_type_context[:bullet_type] == :unknown
         if (distance(bullet[:point], position) / BULLET_SPPED) < WARNING_BULLET_TICKS
           left_or_right @heading, robot[:direction] do |direction, diff|

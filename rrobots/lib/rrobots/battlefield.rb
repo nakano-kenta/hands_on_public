@@ -37,6 +37,11 @@ class Battlefield
   end
 
   def before_start
+    puts "==== Match #{@match} start ==="
+    @teams.each do |team_name, robots|
+      puts "#{team_name}: #{robots.map(&:uniq_name).join ' '}"
+    end
+
     robots.each do |robot|
       begin
         robot.send :before_start unless robot.dead

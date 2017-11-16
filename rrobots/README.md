@@ -69,9 +69,9 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 ```
 
 ## Master2(700x700)
-31. Get 4500 score in 10 games against WallWithAiming
-32. Get 4500 score in 10 games against CircleWithAiming
-33. Get 4500 score in 10 games against SiwingWithAiming
+31. Get 4000 score in 10 games against WallWithAiming
+32. Get 4000 score in 10 games against CircleWithAiming
+33. Get 4000 score in 10 games against SiwingWithAiming
 
 ```
 30. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/wall_with_aiming --no-gui
@@ -87,7 +87,7 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 ```
 
 ## Master4(700x700)
-50. Get 4500 score in 10 games against RandomCrawler
+50. Get 4000 score in 10 games against RandomCrawler
 
 ```
 50. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=700,700 $MY_ROBOT tanks/random_crawler --no-gui

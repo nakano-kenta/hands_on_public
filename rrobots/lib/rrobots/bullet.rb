@@ -30,9 +30,15 @@ class Bullet
         explosion = Explosion.new(@battlefield, other.x, other.y, @energy)
         @battlefield << explosion
         damage = other.hit(self)
-        origin.damage_given += damage
-        origin.bullet_damage_given += damage
-        origin.kills += 1 if other.dead
+        if origin.team == other.team
+          origin.friend_damage_given += damage
+          origin.friend_bullet_damage_given += damage
+          origin.friend_kills += 1 if other.dead
+        else
+          origin.damage_given += damage
+          origin.bullet_damage_given += damage
+          origin.kills += 1 if other.dead
+        end
         other.damage_taken += damage
         other.bullet_damage_taken += damage
         @dead = true
