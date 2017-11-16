@@ -90,11 +90,12 @@ module SampleUtil
   end
 
   def scan_for_fire
-    @turn_radar_angle ||= 45
+    @turn_radar_angle ||= 60
     @scanned_by_name ||= {}
     events['robot_scanned'].each{|scanned|
       @scanned_by_name[scanned[:name]] ||= {}
       @scanned_by_name[scanned[:name]][:latest] = time
+      @scanned_by_name[scanned[:name]][:name] = scanned[:name]
       @scanned_by_name[scanned[:name]][:direction] = scanned[:direction]
       @scanned_by_name[scanned[:name]][:distance] = scanned[:distance]
       @scanned_by_name[scanned[:name]][:energy] = scanned[:energy]
@@ -108,7 +109,7 @@ module SampleUtil
       scanned[:diff] = diff
     end
 
-    nearest = @scanned_by_name.values.compact.min do |a, b|
+    nearest = @scanned_by_name.values.compact.reject{|robot| team_members.include? robot[:name]}.min do |a, b|
       a[:diff] <=> b[:diff]
     end
 

@@ -28,6 +28,7 @@ class Battlefield
     when RobotRunner
       @robots << object
       @teams[object.team] << object
+      object.team_members = @teams[object.team]
     when Bullet
       @bullets << object
     when Explosion
@@ -35,7 +36,21 @@ class Battlefield
     end
   end
 
-   def tick
+  def before_start
+    robots.each do |robot|
+      begin
+        robot.send :before_start unless robot.dead
+      rescue Exception => bang
+        puts "#{robot} made an exception:"
+        puts "#{bang.class}: #{bang}", bang.backtrace
+        robot.instance_eval{@energy = -1}
+      end
+    end
+  end
+
+  def tick
+    before_start if @time == 0
+
     explosions.delete_if{|explosion| explosion.dead}
     explosions.each{|explosion| explosion.tick}
 
@@ -45,6 +60,14 @@ class Battlefield
     robots.each do |robot|
       begin
         robot.send :internal_tick unless robot.dead
+      rescue Exception => bang
+        puts "#{robot} made an exception:"
+        puts "#{bang.class}: #{bang}", bang.backtrace
+        robot.instance_eval{@energy = -1}
+      end
+    end
+    robots.each do |robot|
+      begin
         robot.send :after_tick unless robot.dead
       rescue Exception => bang
         puts "#{robot} made an exception:"

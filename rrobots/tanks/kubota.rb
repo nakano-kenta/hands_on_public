@@ -201,6 +201,7 @@ class Kubota
     initial if time == 0
     initial_for_tick events
 
+    team_message_received events['team_messages']
     robot_scanned events['robot_scanned']
     move_bullets
     move_enemy_bullets
@@ -216,6 +217,15 @@ class Kubota
     decide_scan
     draw_destination
     set_my_past_position
+  end
+
+  def team_message_received(events)
+    events.each do |event|
+      event = Marshal.load(event)
+      if event[:e] == :fire
+        @enemy_bullets << event[:d]
+      end
+    end
   end
 
   def hit(events)
@@ -575,7 +585,7 @@ class Kubota
         debug_attack line
       end
 
-      @bullets << {
+      bullet = {
         time: time,
         start: position,
         robot: robot,
@@ -584,6 +594,12 @@ class Kubota
         speed: BULLET_SPPED,
         aim_type: robot[:aim_type]
       }
+
+      @bullets << bullet
+      team_message Marshal.dump({
+        e: :fire,
+        d: bullet
+      })
 
       fire_with_logging_virtual_bullets(robot)
 
@@ -759,6 +775,7 @@ class Kubota
     events&.each do |scanned|
       robot = @robots[scanned[:name]]
       next unless robot[:acceleration]
+      next if robot[:team]
       delta_energy = robot[:acceleration][:energy] + robot[:hit]
       robot[:hit] = 0
       if 0 > delta_energy and delta_energy >= -3
@@ -801,30 +818,33 @@ class Kubota
   UNKNOWN_BULLET_ALPHA = 10.freeze
   UNKNOWN_BULLET_MULTI = 1.freeze
   def move_enemy_bullets_bullet_type(robot, bullet, bullet_type_context)
-    if bullet_type_context[:bullet_type] == :unknown
-      if (distance(bullet[:point], position) / BULLET_SPPED) < WARNING_BULLET_TICKS
-        left_or_right @heading, robot[:direction] do |direction, diff|
-          put_anti_gravity_point 0, to_point(direction, 50, position), battlefield_width + battlefield_height, UNKNOWN_BULLET_ALPHA, UNKNOWN_BULLET_MULTI
+    if bullet_type_context[:bullet_type] != :team
+      if bullet_type_context[:bullet_type] == :unknown
+        if (distance(bullet[:point], position) / BULLET_SPPED) < WARNING_BULLET_TICKS
+          left_or_right @heading, robot[:direction] do |direction, diff|
+            put_anti_gravity_point 0, to_point(direction, 50, position), battlefield_width + battlefield_height, UNKNOWN_BULLET_ALPHA, UNKNOWN_BULLET_MULTI
+          end
         end
+        return
+      elsif  bullet_type_context[:bullet_type] != bullet[:aim_type]
+        # Do nothing
+        return
       end
-    elsif  bullet_type_context[:bullet_type] != bullet[:aim_type]
-    # Do nothing
-    else
-      current_distance = battlefield_height + battlefield_width
-      my_context = new_my_context
-      bullet_point = bullet[:point]
-      bullet[:warning] = false
-      WARNING_BULLET_TICKS.times.each do
-        d = distance(my_context[:prospect_point], bullet_point)
-        if d < HIT_RANGE * 3
-          bullet[:warning] = true
-          break
-        end
-        break if current_distance < d
-        current_distance = d
-        my_context = prospect_next_by_acceleration(my_context)
-        bullet_point = to_point bullet[:heading], bullet[:speed], bullet_point
+    end
+    current_distance = battlefield_height + battlefield_width
+    my_context = new_my_context
+    bullet_point = bullet[:point]
+    bullet[:warning] = false
+    WARNING_BULLET_TICKS.times.each do
+      d = distance(my_context[:prospect_point], bullet_point)
+      if d < HIT_RANGE * 3
+        bullet[:warning] = true
+        break
       end
+      break if current_distance < d
+      current_distance = d
+      my_context = prospect_next_by_acceleration(my_context)
+      bullet_point = to_point bullet[:heading], bullet[:speed], bullet_point
     end
   end
 
@@ -894,7 +914,7 @@ class Kubota
 
   def set_lockon_mode
     target = @robots.values.select{|a|
-      time - a[:latest] <= 8
+      !a[:team] and time - a[:latest] <= 8
     }.sort{|a, b|
       ((a[:energy] < ZOMBI_ENERGY) ? 0 : a[:distance]) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : b[:distance])
     }.first
@@ -985,6 +1005,7 @@ class Kubota
       point = to_point scanned[:direction], scanned[:distance], position
       @robots[scanned[:name]] ||= {
         name: scanned[:name],
+        team: team_members.include?(scanned[:name]),
         aim_type: :accelerated,
         bullet_type: :unknown,
         fire_logs: [],

@@ -42,7 +42,9 @@ module Robot
   attr_accessor :skin_prefix
 
   #team of your robot
-  attr_state :team
+  attr_accessor :team
+  attr_accessor :team_members
+  attr_accessor :name
 
   #the height of the battlefield
   attr_state :battlefield_height
@@ -118,6 +120,9 @@ module Robot
 
   #broadcasts received last turn
   attr_event :broadcasts
+
+  attr_action :team_message
+  attr_event :team_messages
 
   attr_state :num_robots
   attr_state :gui

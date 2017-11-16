@@ -2,9 +2,9 @@ require 'securerandom'
 
 class RobotRunner
 
-  STATE_IVARS = [ :x, :y, :gun_heat, :heading, :gun_heading, :radar_heading, :time, :size, :speed, :energy, :team ]
+  STATE_IVARS = [ :x, :y, :gun_heat, :heading, :gun_heading, :radar_heading, :time, :size, :speed, :energy ]
   NUMERIC_ACTIONS = [ :fire, :turn, :turn_gun, :turn_radar, :accelerate]
-  STRING_ACTIONS = [ :say, :broadcast ]
+  STRING_ACTIONS = [ :say, :broadcast, :team_message ]
   STYLES = [ :font_color, :body_color, :turret_color, :radar_color ]
 
   STATE_IVARS.each{|iv|
@@ -27,6 +27,7 @@ class RobotRunner
 
   #team of this robot
   attr_accessor :team
+  attr_accessor :team_members
 
   #keeps track of total damage done by this robot
   attr_accessor :damage_given
@@ -53,14 +54,20 @@ class RobotRunner
     @robot = robot
     @battlefield = bf
     @team = team
+    @team_members = []
     set_action_limits
     set_initial_state
     @events = Hash.new{|h, k| h[k]=[]}
     @actions = Hash.new(0)
     @robot.styles = Hash.new(0)
-    @robot.before_start if @robot.respond_to? :before_start
     @num_fire = 0
     @num_hit = 0
+  end
+
+  def before_start
+    @robot.team_members = @team_members.map(&:uniq_name)
+    @robot.name = @uniq_name
+    @robot.before_start if @robot.respond_to? :before_start
   end
 
   def skin_prefix
@@ -108,6 +115,7 @@ class RobotRunner
     @accelerate_min, @accelerate_max = -1, 1
     @teleport_min, @teleport_max = 0, 100
     @say_max = 256
+    @team_message_max = 256
     @broadcast_max = 16
   end
 
@@ -149,15 +157,12 @@ class RobotRunner
   end
 
   def internal_tick
-    scan
     update_state
     robot_tick
     parse_actions
     fire
     turn
     move
-    speak
-    broadcast
     @time += 1
   end
 
@@ -176,6 +181,10 @@ class RobotRunner
   end
 
   def after_tick
+    scan
+    team_message
+    speak
+    broadcast
     @battlefield.robots.each do |other|
       if (other != self) && (!other.dead)
         difference = Math.hypot(@y - other.y, other.x - @x)
@@ -368,6 +377,17 @@ class RobotRunner
       @speech_counter = 50
     elsif @speech and (@speech_counter -= 1) < 0
       @speech = nil
+    end
+  end
+
+  def team_message
+    @team_members.each do |other|
+      if (other != self) && (!other.dead)
+        @events['team_messages'] << {
+          from: other.uniq_name,
+          message: other.actions[:team_message].to_s
+        }
+      end
     end
   end
 
