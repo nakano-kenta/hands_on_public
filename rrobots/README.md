@@ -153,7 +153,7 @@ ex > export MY_ROBOT=tanks/my_robot.rb
 # Ace2(1500x1500)
 700. Win by score in 10 games against circle_aiming, reaction and random_crawler team.
 701. Win by score in 10 games against circle_aiming, swing_aiming and wall_aiming team.
-701. Win by score in 10 games against 3 random_crawlers team.
+702. Win by score in 10 games against 3 random_crawlers team.
 
 ```
 700. RUBYLIB=lib bundle exec ./bin/rrobots --match=10 --resolution=1500,1500 $MY_ROBOT tanks/reaction tanks/random_crawler --teams=1 --no-gui
