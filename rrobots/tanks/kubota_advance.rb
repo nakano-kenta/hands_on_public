@@ -45,6 +45,29 @@ class KubotaAdvance < Kubota
     end
   end
 
+  def decide_move
+    nearest = nil
+    enemies.each do |e1|
+      e1_distance = distance e1[:prospect_point], position
+      enemies.each do |e2|
+        next if e1 == e2
+        point = to_point to_direction(e1[:prospect_point], e2[:prospect_point]), e1_distance, e1[:prospect_point]
+        next if out_of_field?(point)
+        p_distance = distance position, point
+        if !nearest or nearest[:distance] > p_distance
+          nearest = {
+            distance: p_distance,
+            point: point
+          }
+        end
+      end
+    end
+    if nearest
+      put_anti_gravity_point 0, nearest[:point], battlefield_height + battlefield_width, -5, 0
+    end
+    super
+  end
+
   def prospect_next_by_pattern(robot)
     if @replay_point == nil
       diff_by_past = {}
@@ -156,6 +179,7 @@ class KubotaAdvance < Kubota
 
   def aim(power)
     aim_type = @lockon_target[:aim_type]
+    aim_type = :direct if @lockon_target[:energy] <= ZOMBI_ENERGY
     if aim_type == :simple
       fire_or_turn power do |target_future|
         prospect_next_by_simple target_future
@@ -264,25 +288,40 @@ class KubotaAdvance < Kubota
     if name
       super name
     else
-      distance_a = 0
-      distance_b = 0
-      target = @robots.values.select{|a|
-        !a[:team] and time - a[:latest] <= 8
-      }.sort{|a, b|
-        team_members.each do |member_name|
-          member = @robots[member_name]
-          if member_name == name or !member
-            distance_a = a[:distance] / 2
-            distance_b = b[:distance] / 2
-          else
-            distance_a = distance(member[:prospect_point], a[:prospect_point])
-            distance_b = distance(member[:prospect_point], b[:prospect_point])
+      target = nil
+      # if teams.length > 0
+        distance_a = 0
+        distance_b = 0
+        target = enemies.sort{|a, b|
+          team_members.each do |member_name|
+            member = @robots[member_name]
+            if member_name == name or !member
+              distance_a = a[:distance] / 2
+              distance_b = b[:distance] / 2
+            else
+              distance_a = distance(member[:prospect_point], a[:prospect_point])
+              distance_b = distance(member[:prospect_point], b[:prospect_point])
+            end
           end
-        end
-        distance_a *= a[:energy] ** 0.5
-        distance_b *= b[:energy] ** 0.5
-        ((a[:energy] < ZOMBI_ENERGY) ? 0 : distance_a) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : distance_b)
-      }.first
+          distance_a *= a[:energy] ** 0.5
+          distance_b *= b[:energy] ** 0.5
+          ((a[:energy] < ZOMBI_ENERGY) ? 0 : distance_a) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : distance_b)
+        }.first
+      # else
+      #   score_by_name = {}
+      #   enemies.each do |e1|
+      #     score_by_name[e1[:name]] = 0
+      #     enemies.each do |e2|
+      #       next if e1 == e2
+      #       score_by_name[e1[:name]] += distance e1[:prospect_point], e2[:prospect_point]
+      #     end
+      #     score_by_name[e1[:name]] -= distance position, e1[:prospect_point]
+      #   end
+      #   name = score_by_name.max {|a, b|
+      #     a[1] <=> b[1]
+      #   }.first
+      #   target = @robots[name]
+      # end
       if target
         super target[:name]
       else

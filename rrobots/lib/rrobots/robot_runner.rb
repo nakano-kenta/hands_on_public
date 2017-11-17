@@ -71,13 +71,14 @@ class RobotRunner
       @bot = true
       @energy *= 1.5
     end
+    @leader = false if options.teams.length == 0
   end
 
   def before_start
     @robot.team_members = @team_members.map(&:uniq_name)
     @robot.name = @uniq_name
     @robot.before_start if @robot.respond_to? :before_start
-    if @robot.team_members.first == uniq_name
+    if @robot.team_members.first == uniq_name and @leader == nil
       @leader = true
       @energy *= 2
     end
