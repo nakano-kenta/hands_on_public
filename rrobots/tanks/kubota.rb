@@ -612,11 +612,11 @@ class Kubota
   end
 
   def aim_types
-    [:direct, :straight_12, :straight_24, :accelerated, :pattern, :simple]
+    [:direct, :straight_12, :straight_24, :accelerated]
   end
 
   def virtual_bullet(robot, aim_type, &block)
-    if robot[:aim_type] != aim_type
+    if robot[:aim_type] != aim_type and aim_types.include? aim_type
       target_future = calc_target_future do |target_future|
         block.call target_future
       end
@@ -636,7 +636,7 @@ class Kubota
   end
 
   def fire_with_logging_virtual_bullets(robot)
-    if robot[:aim_type] != :direct
+    if robot[:aim_type] != :direct and aim_types.include? :direct
       @bullets << {
         time: time,
         start: position,

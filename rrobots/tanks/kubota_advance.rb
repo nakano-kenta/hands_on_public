@@ -165,6 +165,10 @@ class KubotaAdvance < Kubota
     return prospect_next_by_acceleration(target_future)
   end
 
+  def aim_types
+    [:direct, :straight_12, :straight_24, :accelerated, :pattern, :simple]
+  end
+
   def fire_with_logging_virtual_bullets(robot)
     super
 
