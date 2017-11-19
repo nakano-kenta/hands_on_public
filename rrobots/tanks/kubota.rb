@@ -1019,10 +1019,11 @@ class Kubota
   end
 
   def set_lockon_mode(name = nil)
+    target = nil
     if name
       target = @robots[name]
     else
-      target = enemies.select{|enemy| !enemy[:zombi_tick] or enemy[:zombi_tick] > time }.sort{|a, b|
+      target = enemies.select{|enemy| enemy[:zombi_tick] < time }.sort{|a, b|
         ((a[:energy] < ZOMBI_ENERGY) ? 0 : a[:distance]) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : b[:distance])
       }.first
     end
