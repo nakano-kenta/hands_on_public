@@ -292,7 +292,7 @@ class KubotaAdvance < Kubota
       # if teams.length > 0
         distance_a = 0
         distance_b = 0
-        target = enemies.sort{|a, b|
+        target = enemies.select{|enemy| enemy[:zombi_tick] < time }.sort{|a, b|
           team_members.each do |member_name|
             member = @robots[member_name]
             if member_name == name or !member

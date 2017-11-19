@@ -185,7 +185,7 @@ class Kubota
   NUM_GOT_HIT_LOGS = 200.freeze
   NUM_LOGS = 1500.freeze
   DYING_ENERGY = 1.0.freeze
-  DANGER_ENERGY = 10.0.freeze
+  DANGER_ENERGY = 12.3.freeze
 
   def before_start
     @debug_msg = false
@@ -521,6 +521,9 @@ class Kubota
       if (time - robot[:latest]) < 15
         if robot[:team]
           vectors << anti_gravity(robot[:prospect_point], TEAM_AFFECT_DISTANCE, TEAM_ALPHA, TEAM_MULTI)
+        # elsif robot[:distance] < SAFETY_DISTANCE
+          # TODO
+        #   vectors << anti_gravity(robot[:prospect_point], ENEMY_AFFECT_DISTANCE, ENEMY_ALPHA, ENEMY_MULTI)
         else
           vectors << anti_gravity(robot[:prospect_point], ENEMY_AFFECT_DISTANCE, ENEMY_ALPHA, ENEMY_MULTI)
         end
@@ -661,6 +664,7 @@ class Kubota
           end
         end
       end
+      @lockon_target[:zombi_tick] = (@lockon_target[:distance] / BULLET_SPPED) + time if @lockon_target[:energy] <= ZOMBI_ENERGY
       fire power
       if @debug_attack
         log_by_aim_type = log_by_aim_type @lockon_target, 100
@@ -1018,9 +1022,7 @@ class Kubota
     if name
       target = @robots[name]
     else
-      target = @robots.values.select{|a|
-        !a[:team] and time - a[:latest] <= 8
-      }.sort{|a, b|
+      target = enemies.select{|enemy| !enemy[:zombi_tick] or enemy[:zombi_tick] > time }.sort{|a, b|
         ((a[:energy] < ZOMBI_ENERGY) ? 0 : a[:distance]) <=> ((b[:energy] < ZOMBI_ENERGY) ? 0 : b[:distance])
       }.first
     end
@@ -1133,6 +1135,7 @@ class Kubota
         got_hit_logs: [],
         logs: [],
         statistics: [],
+        zombi_ticks: 0,
       }
       robot = @robots[scanned[:name]]
       if robot[:latest]
@@ -1154,6 +1157,7 @@ class Kubota
         robot[:prospect_heading] = heading
       end
       robot[:energy] = scanned[:energy]
+      robot[:zombi_tick] = 0 if robot[:energy] > ZOMBI_ENERGY
       robot[:distance] = scanned[:distance]
       robot[:direction] = scanned[:direction]
       robot[:point] = point

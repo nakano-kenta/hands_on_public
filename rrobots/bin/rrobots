@@ -141,8 +141,7 @@ def setup_battlefield(options, robots, round)
       robot.round = round
       @durable_context_by_name[robot_no] ||= {}
       robot.durable_context = @durable_context_by_name[robot_no]
-      robotrunner = RobotRunner.new(robot, battlefield, team, options)
-      robotrunner.uniq_name = "#{in_game_name}_#{robot_no}"
+      robotrunner = RobotRunner.new(robot, battlefield, team, "#{in_game_name}_#{robot_no}", options)
       battlefield << robotrunner
     rescue Exception => error
       puts 'Error loading ' + in_game_name.to_s + '!'
