@@ -16,15 +16,18 @@ class RRobotsGameWindow < Gosu::Window
   attr_reader :battlefield, :xres, :yres
   attr_accessor :on_game_over_handlers, :boom, :robots, :bullets, :explosions
 
-  def initialize(battlefield, xres, yres)
+  def initialize(xres, yres)
     super(xres+X_PADDING, yres+Y_PADDING, false, 16)
     self.caption = 'RRobots'
     @font = Gosu::Font.new(self, BIG_FONT, 24)
     @small_font = Gosu::Font.new(self, SMALL_FONT, 24) #xres/100
-    @battlefield = battlefield
     @xres, @yres = xres, yres
-    @on_game_over_handlers = []
     init_window
+    @on_game_over_handlers = []
+  end
+
+  def set_battlefield battlefield
+    @battlefield = battlefield
     init_simulation
     @leaderboard = Leaderboard.new(self, @robots, @battlefield)
   end
@@ -131,6 +134,7 @@ class RRobotsGameWindow < Gosu::Window
       @robots[ai].info.draw_rel("#{ai.uniq_name}", ai.x / 2, ai.y / 2 + 30, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
       @robots[ai].info.draw_rel("#{ai.energy.to_i}", ai.x / 2, ai.y / 2 + 50, ZOrder::UI, 0.5, 0.5, 1, 1, @robots[ai].font_color)
     end
+  rescue
   end
 
   def draw_bullets

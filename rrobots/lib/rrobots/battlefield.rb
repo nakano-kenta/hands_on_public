@@ -99,5 +99,4 @@ class Battlefield
      :bullets    => bullets.map{|b| b.state},
      :robots     => robots.map{|r| r.state}}
   end
-
 end

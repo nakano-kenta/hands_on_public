@@ -67,22 +67,11 @@ def run_out_of_gui(battlefield)
   print_outcome(battlefield)
 end
 
-def run_in_gui(battlefield, xres, yres)
-  require 'rrobots/gui'
-  arena = RRobotsGameWindow.new(battlefield, xres, yres)
-  game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 50 : 100
-  outcome_printed = false
-  arena.on_game_over{|battlefield|
-    unless outcome_printed
-      print_outcome(battlefield)
-      outcome_printed = true
-    end
-    if game_over_counter < 0
-      arena.close
-    end
-    game_over_counter -= 1
-  }
-  arena.show
+def setup_gui(xres, yres)
+  require 'rrobots/gui' unless @required
+  @required = true
+
+  arena = RRobotsGameWindow.new(xres, yres)
 end
 
 def print_outcome(battlefield)
@@ -261,13 +250,7 @@ def score(result)
   }
 end
 
-def match(summary, options, robots, match_no)
-  battlefield = setup_battlefield(options, robots, match_no)
-  if options.gui
-    run_in_gui(battlefield, options.resolution[0], options.resolution[1])
-  else
-    run_out_of_gui(battlefield)
-  end
+def print_battlefield_results(battlefield, summary, options, match_no)
   team_results = {}
   robot_results = {}
   battlefield.robots.each do |robot|
@@ -341,19 +324,55 @@ end
 
 summary = {}
 match_no = 0
+matches = []
 (options.match || 1).times.each do
   if options.league
     robots.each_with_index do |r1, index|
       robots[(index + 1)..-1].each_with_index do |r2|
         match_no += 1
-        match(summary, options, [r1, r2], match_no)
+        matches << [match_no, [r1, r2]]
       end
     end
   else
     match_no += 1
-    match(summary, options, robots, match_no)
+    matches << [match_no, robots]
   end
 end
+
+if options.gui
+  arena = setup_gui(options.resolution[0], options.resolution[1])
+  match = matches.shift
+  battlefield = setup_battlefield(options, match[1], match[0])
+  arena.set_battlefield(battlefield)
+  game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 100 : 200
+  outcome_printed = false
+  arena.on_game_over{|battlefield|
+    unless outcome_printed
+      print_outcome(battlefield)
+      outcome_printed = true
+    end
+    if game_over_counter < 0
+      print_battlefield_results battlefield, summary, options, match[0]
+      match = matches.shift
+      if match
+        battlefield = setup_battlefield(options, match[1], match[0])
+        arena.set_battlefield battlefield
+        game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 100 : 200
+      else
+        arena.close
+      end
+    end
+    game_over_counter -= 1
+  }
+  arena.show
+else
+  matches.each do |match|
+    battlefield = setup_battlefield(options, match[1], match[0])
+    run_out_of_gui(battlefield)
+    print_battlefield_results battlefield, summary, options, match[0]
+  end
+end
+
 if options.teams.length == 0
   print_results('=== Finally ===', nil, summary.values.select{|a| !a[:name].start_with? 'Team_'}.sort{|a, b| b[:score] <=> a[:score]}, nil, true)
 else
