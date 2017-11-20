@@ -31,7 +31,7 @@ require 'securerandom'
   #  broadcast(msg)      #broadcasts msg to all bots (they recieve 'broadcasts'
   #                      #events with the msg and rough direction)
 
-class BaoNew
+class Bao
   include Robot
   TURN_TANK_MAX = 10
   TURN_GUN_MAX = 30
