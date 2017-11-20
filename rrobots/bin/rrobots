@@ -70,7 +70,7 @@ end
 def run_in_gui(battlefield, xres, yres)
   require 'rrobots/gui'
   arena = RRobotsGameWindow.new(battlefield, xres, yres)
-  game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 250 : 500
+  game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 50 : 100
   outcome_printed = false
   arena.on_game_over{|battlefield|
     unless outcome_printed
@@ -141,8 +141,7 @@ def setup_battlefield(options, robots, round)
       robot.round = round
       @durable_context_by_name[robot_no] ||= {}
       robot.durable_context = @durable_context_by_name[robot_no]
-      robotrunner = RobotRunner.new(robot, battlefield, team, options)
-      robotrunner.uniq_name = "#{in_game_name}_#{robot_no}"
+      robotrunner = RobotRunner.new(robot, battlefield, team, "#{in_game_name}_#{robot_no}", options)
       battlefield << robotrunner
     rescue Exception => error
       puts 'Error loading ' + in_game_name.to_s + '!'
@@ -199,7 +198,9 @@ def _print_results(robot_results, summary = nil, with_score = false)
         vertical_format lines[3], offset, " #{'(%.1f)' % scores[:kills]}"
         vertical_format lines[4], offset, " #{'(%.1f)' % scores[:friend_kills]}"
         vertical_format lines[8], offset, " #{'(%.1f)' % scores[:bullet_damage_given]}"
+        vertical_format lines[9], offset, " #{'(%.1f)' % scores[:friend_bullet_damage_given]}"
         vertical_format lines[13], offset, " #{'(%.1f)' % scores[:ram_damage_given]}"
+        vertical_format lines[14], offset, " #{'(%.1f)' % scores[:friend_ram_damage_given]}"
         vertical_format lines[16], offset, " #{'(%.1f)' % scores[:ram_kills]}"
         vertical_format lines[17], offset, " #{'(%.1f)' % scores[:friend_ram_kills]}"
         offset += 12
@@ -252,7 +253,9 @@ def score(result)
     kills: result[:kills] * 50,
     friend_kills: result[:friend_kills] * -50,
     bullet_damage_given: result[:bullet_damage_given] * 2,
+    friend_bullet_damage_given: result[:friend_bullet_damage_given] * -2,
     ram_damage_given: result[:ram_damage_given] * 3,
+    friend_ram_damage_given: result[:friend_ram_damage_given] * -1.5,
     ram_kills: result[:ram_kills] * 100,
     friend_ram_kills: result[:friend_ram_kills] * -100,
   }

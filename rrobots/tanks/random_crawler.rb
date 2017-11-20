@@ -35,5 +35,12 @@ class RandomCrawler
     end
 
     shoot_uniform_speed
+
+    @scanned_by_name.values.compact.each do |robot|
+      if robot[:distance] < @size * 6 and (robot[:direction] - heading).abs < 90
+        turn 10
+      end
+    end
+
   end
 end

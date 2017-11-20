@@ -22,6 +22,10 @@ class Watanabe
     { x: x, y: y }
   end
 
+  def target_last
+    @target_info.last
+  end
+
   def future_point
     calc_point(present_point, speed + @accelerate_value, heading + @turn_value)
   end
@@ -34,14 +38,15 @@ class Watanabe
   end
 
   def diff_energy
-    @target_info[-2][:energy] - @target_info.last[:energy]
+    @target_info[-2][:energy] - target_last[:energy]
+  end
+
+  def to_degree(radian)
+    (radian * 180.0 / Math::PI + 360) % 360
   end
 
   def angle(base, target)
-    degree = Math::atan2(target[:x] - base[:x], target[:y] - base[:y]) * 180 / Math::PI
-    degree = degree + 270
-    degree = degree - 360 if degree > 360
-    degree
+    to_degree(Math::atan2(target[:y] - base[:y], base[:x] - target[:x]) - Math::PI)
   end
 
   def was_shot?
@@ -82,12 +87,10 @@ class Watanabe
       @turn_value = center_direction - heading
     elsif @target_info.size >= 2 && @target_info.last[:distance] < 300
       @accelerate_value = -1
-      diff_direction = angle(present_point, {x: @target_info.last[:x], y: @target_info.last[:y]}) - heading
+      diff_direction = angle(present_point, {x: target_last[:x], y: target_last[:y]}) - heading
       @turn_value = diff_direction
     elsif @target_info.size >= 2 && was_shot?
       @accelerate_value = -1
-      # diff_direction = angle(present_point, {x: @target_info.last[:x], y: @target_info.last[:y]}) - heading
-      # @turn_value = diff_direction
     else
       return if @run_duration - time > 0
       @run_duration = rand(50..100)
@@ -101,14 +104,12 @@ class Watanabe
     return if @target_info.size < 2
     diff_angle = 0
     (20..100).each do |tick|
-      target_future_point = { x: @target_info.last[:x] + @target_info.last[:x_velocity] * tick, y: @target_info.last[:y] + @target_info.last[:y_velocity] * tick }
+      target_future_point = { x: target_last[:x] + target_last[:x_velocity] * tick, y: target_last[:y] + target_last[:y_velocity] * tick }
       diff_angle = angle(present_point, target_future_point) - gun_heading
       break if diff_angle.abs > MAX_GUN_TURN
       distance = Math::hypot(target_future_point[:x] - x, target_future_point[:y] - y)
       break if distance - (BULLET_SPPED * tick) < 10
     end
-    # target_future_point = { x: @target_info.last[:x] + @target_info.last[:x_velocity], y: @target_info.last[:y] + @target_info.last[:y_velocity]}
-    # diff_angle = angle(present_point, target_future_point) - gun_heading
     case diff_angle
     when diff_angle > MAX_GUN_TURN
       turn_gun MAX_GUN_TURN
@@ -116,10 +117,9 @@ class Watanabe
       turn_gun -MAX_GUN_TURN
     else
       turn_gun diff_angle - @turn_value
-      fire 3 if (diff_angle - @turn_value).abs <= 30
+      fire 3 if (diff_angle - @turn_value).abs <= 10
     end
   end
-
 
   def tick(events)
     return if game_over

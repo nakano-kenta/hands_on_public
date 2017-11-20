@@ -138,9 +138,9 @@ module SampleUtil
         if nearest[:point] and gun_heat == 0
           block.call nearest, ticks, point
         end
+        nearest[:point] = point
       end
       @last_nearest = nearest[:latest]
-      nearest[:point] = point
     end
   end
 
@@ -152,6 +152,7 @@ module SampleUtil
       diff = (nangle - gun_heading) % 360
       diff -= 360 if diff > 180
       diff += 360 if diff < -180
+      @turn_angle = [[@turn_angle, 10].min, -10].max
       turn_gun (diff - @turn_angle)
       if (diff - @turn_angle).abs <= 30
         @will_fire = true

@@ -55,11 +55,12 @@ class RobotRunner
   attr_accessor :num_fire
   attr_accessor :num_hit
 
-  def initialize robot, bf, team, options
+  def initialize robot, bf, team, uniq_name, options
     @robot = robot
     @battlefield = bf
     @team = team
     @team_members = []
+    @uniq_name = uniq_name
     set_action_limits
     set_initial_state
     @events = Hash.new{|h, k| h[k]=[]}
@@ -71,15 +72,26 @@ class RobotRunner
       @bot = true
       @energy *= 1.5
     end
+    @leader = false if options.teams.length > 0
   end
 
   def before_start
-    @robot.team_members = @team_members.map(&:uniq_name)
     @robot.name = @uniq_name
+    @robot.team_members = @team_members.map(&:uniq_name)
     @robot.before_start if @robot.respond_to? :before_start
-    if @robot.team_members.first == uniq_name
+    if @robot.team_members.first == uniq_name and @leader == false
       @leader = true
       @energy *= 2
+    end
+    if @leader == false
+      leader = @battlefield.robots.select {|robot|
+        robot.uniq_name == @robot.team_members.first
+      }.first
+      @x = leader.x
+      @y = leader.y
+      teleport (@battlefield.width/4)-@size*2, (@battlefield.height/4)-@size*2
+    else
+      teleport
     end
   end
 
@@ -111,18 +123,19 @@ class RobotRunner
     @ram_damage_taken = 0
     @ram_kills = 0
     @friend_ram_kills = 0
-    teleport
   end
 
   def teleport(distance_x=(@battlefield.width/2)-@size*2, distance_y=(@battlefield.height/2)-@size*2)
     10.times.each do
-      @x += ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
-      @y += ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
+      x = @x + ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
+      y = @y + ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
       next if @battlefield.robots.any? do |robot|
         unless robot.x == robot.prev_x
-          Math.hypot(robot.x - @x, robot.y - @y) < @size * 4
+          Math.hypot(robot.x - x, robot.y - y) < @size * 4
         end
       end
+      @x = x
+      @y = y
       break
     end
     @gun_heat = 3
@@ -152,9 +165,9 @@ class RobotRunner
       from: bullet.origin.uniq_name,
       damage: damage,
     }
+    bullet.origin.num_hit += 1
     if !bullet.origin.dead
-      bullet.origin.num_hit += 1
-      bullet.origin.energy += damage * 2/3
+      bullet.origin.energy += damage * 2/3 if bullet.origin.team != @team
       bullet.origin.events['hit'] << {
         to: uniq_name,
         damage: damage
