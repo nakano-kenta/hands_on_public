@@ -67,6 +67,7 @@ class Yamaguchi
     @acceleration ||= 1
     @progress_direction ||= 1
     @enemy_stop_at ||= {}
+    @log_by_robo.delete_if { |name, logs| 300 < time - logs.last[:time] }
     return if @log_by_robo.empty?
     recent_logs = @log_by_robo.map { |name, logs| (time - logs.last[:time]) < 10 ? logs.last : nil }.compact
     return if recent_logs.empty?
@@ -83,11 +84,11 @@ class Yamaguchi
     near_enemy *= @progress_direction
     counter_angle += (20 * near_enemy)
     @enemy_stop_at[close_enemy[:name]] ||= time if close_enemy[:energy] < 1
-    counter_angle = 0 if @enemy_stop_at[close_enemy[:name]] and time - @enemy_stop_at[close_enemy[:name]] > 50 and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
+    counter_angle = 0 if @enemy_stop_at[close_enemy[:name]] and time - @enemy_stop_at[close_enemy[:name]] > 50 and @log_by_robo[close_enemy[:name]][-10] and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
     direction = diff_direction( {x: x, y: (battlefield_height - y)}, {x: close_enemy[:x], y: close_enemy[:y]} ) - heading - counter_angle
     @turn_direction = optimize_angle(direction)
     @acceleration = @progress_direction
-    @acceleration = 1 if close_enemy[:energy] < 1 and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
+    @acceleration = 1 if close_enemy[:energy] < 1 and @log_by_robo[close_enemy[:name]][-10] and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
     @progress_direction *= -1 unless events[:crash_into_wall].empty?
     @progress_direction *= -1 unless events[:crash_into_enemy].empty?
     @duration ||= 0
@@ -140,6 +141,8 @@ class Yamaguchi
 
   def attack
     @aim.delete_if { |aim| 10 < time - aim[:time] }
+    @aim.delete_if { |v| !@log_by_robo.keys.include?(v[:name]) }
+    @next_aim = nil if @next_aim and !@log_by_robo.keys.include?(@next_aim[:name])
     @next_aim ||= @aim.first
     return unless @next_aim
     if !@next_aim[:singular] and \
