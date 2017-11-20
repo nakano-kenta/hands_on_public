@@ -6,7 +6,7 @@ class Sano
   SCAN_SAVE_TIME_THRESHOLD = 200
   TARGET_SAVE_TIME_THRESHOLD = 100
   
-  MAX_TURN_DIRECTION = 0
+  MAX_TURN_DIRECTION = 10
   MAX_TURN_GUN_DIRECTION = 30
   BULLET_SPEED = 30
   
@@ -39,6 +39,11 @@ class Sano
       return 
     end
   
+    if @fire_flg
+      fire 3
+      @fire_flg = false
+    end
+
     # 敵の検知
     scan_enemies
     
@@ -50,17 +55,18 @@ class Sano
     
     turn_radar @turn_radar_direction
     
-    turn @turn_direction
-    
-    turn_gun @turn_gun_direction
-    
-    accelerate @acceleration
-    
-    if @fire_flg
-      fire 3
-      @fire_flg = false
+    if @turn_direction != 0
+      turn @turn_direction
     end
-
+    
+    if @turn_gun_direction != 0
+      turn_gun @turn_gun_direction
+    end
+    
+    if @acceleration != 0
+      accelerate @acceleration
+    end
+    
   end
   
   # 索敵結果を履歴保持する 
@@ -185,12 +191,12 @@ class Sano
     @enemies_history.each do |name, enemy|
       
       # 元の情報の算出に必要な情報が揃っていない場合、次の目標へ
-      if enemy.empty?
-        puts("enemy empty")
-      end
+#       if enemy.empty?
+#         puts("enemy empty")
+#       end
       
       if enemy.size < 3
-        puts("enemy size < 3")
+#         puts("enemy size < 3")
         next
       end
       
@@ -225,9 +231,11 @@ class Sano
 #         end
         if diff_arrival_distance < DIFF_ARRIVAL_DISTANCE_THRESHOLD
           if diff_arrival_angle.abs <= MAX_TURN_GUN_DIRECTION
-#             puts("gun_heading = #{gun_heading}, correctAngle(gun_heading)= #{correctAngle(gun_heading)}")
-            attack_target = {:name => name, :time => enemy.last[:time], :time_bullet_arrival => time_bullet_arrival, :x => arrival_x, :y => arrival_y, :diff_arrival_distance => diff_arrival_distance, :arrival_angle => arrival_angle, :diff_arrival_angle => diff_arrival_angle, :energy => enemy.last[:energy]}
-            break
+            if arrival_x >= 0 && arrival_x <= battlefield_width && arrival_y >= 0 && arrival_y <= battlefield_height
+#               puts("gun_heading = #{gun_heading}, correctAngle(gun_heading)= #{correctAngle(gun_heading)}")
+              attack_target = {:name => name, :time => enemy.last[:time], :time_bullet_arrival => time_bullet_arrival, :x => arrival_x, :y => arrival_y, :diff_arrival_distance => diff_arrival_distance, :arrival_angle => arrival_angle, :diff_arrival_angle => diff_arrival_angle, :energy => enemy.last[:energy]}
+              break
+            end
           end
         end
       end
@@ -247,7 +255,7 @@ class Sano
   
   # 向き角度算出(2点指定)
   def calcAngle(point, target)
-    angle = Math::atan2(-target[:y] + point[:y], target[:x] - point[:x]) * 180 / Math::PI 
+    angle = (Math::atan2(-target[:y] + point[:y], target[:x] - point[:x])) * 180 / Math::PI 
     return angle % 360
   end
   
@@ -296,43 +304,44 @@ class Sano
   
   def set_tunk_param
     unless @attack_target
-      puts("default move")
+#       puts("default move")
       # デフォルトの移動
-      @acceleration = rand(-1.0..1.0)
-      @turn_direction = rand(-10..10)
-      @turn_gun_direction = rand(-30..30)
+      
+      if time % 10 == 5
+        @acceleration = rand(-1.0..1.0)
+      else
+        @acceleration = 0
+      end
+      if time % 20 < 10
+        @turn_direction = rand(-10..0)
+      else
+        @turn_direction = rand(1..10)
+      end
+       @turn_gun_direction = default_gun_angle
       return
     else
+    
       @acceleration = rand(-1.0..1.0)
-      @turn_direction = rand(-10..10)
-      @turn_gun_direction = 0
 #       puts("fire")
+      
       # 攻撃対象が存在する場合、自機、砲塔の向きを調整する
-#       @turn_direction = MAX_TURN_DIRECTION if @attack_target[:diff_arrival_angle] > 0
-#       @turn_direction = MAX_TURN_DIRECTION * -1 if @attack_target[:diff_arrival_angle] < 0
+      @turn_direction = MAX_TURN_DIRECTION if @attack_target[:diff_arrival_angle] > 0
+      @turn_direction = MAX_TURN_DIRECTION * -1 if @attack_target[:diff_arrival_angle] < 0
       @turn_gun_direction = @attack_target[:diff_arrival_angle] - @turn_direction
       
-      @fire_flg = true
+      if (@attack_target[:diff_arrival_angle] - @turn_direction).abs <= MAX_TURN_GUN_DIRECTION + 2
+        @fire_flg = true
+      end
     end
   end
 
-  def set_move
-    # 1. 壁に当たらない
-  
+  def default_gun_angle
+    nearest_agle = 0
+    @enemies_history.each do |name, enemy|
+      if nearest_agle.abs < (enemy.last[:direction] - gun_heading).abs
+        nearest_agle = enemy.last[:direction] - gun_heading
+      end
+    end
+    return nearest_agle
   end
-#   
-#   def lam_attack(target)
-#     
-#     lam_target = @enemies_history.select {|enemy| enemy[:name].last[:name] == target[:name]}
-#     
-#     unless lam_target
-#       return
-#     end
-#     
-#     # 指定座標と現在位置の角度を算出
-#     
-#     # 車体を向ける
-#     
-#     # 加速
-#   end
 end
