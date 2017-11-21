@@ -45,9 +45,15 @@ module SakaUtil
 
     def nearest_direction(direction, base_direction)
       nearest = direction
-      (-10..10).each do |mul|
+      nearest_diff = (direction - base_direction).abs
+      return direction if nearest_diff.abs < 180
+      (-5..5).each do |mul|
         alt = direction + mul * 360
-        nearest = alt if (alt - base_direction).abs < (nearest - base_direction).abs
+        diff = (alt - base_direction).abs
+        if diff < nearest_diff
+          nearest = alt
+          nearest_diff = diff
+        end
       end
       nearest
     end
