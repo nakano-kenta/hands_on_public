@@ -8,7 +8,14 @@ class RandomCrawler
   include SampleUtil
 
   def tick events
-    accelerate 1
+    @back ||= 0
+    if events['crash_into_enemy'].length > 0 or @back > 0
+      @back = 16 if @back == 0
+      @back -= 1
+      accelerate -1
+    else
+      accelerate 1
+    end
 
     if x < @size * 2
       turn -heading
@@ -41,6 +48,5 @@ class RandomCrawler
         turn 10
       end
     end
-
   end
 end

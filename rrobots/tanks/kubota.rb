@@ -77,13 +77,13 @@ module Coordinate
 end
 
 module Util
-  MAX_TURN = 10.freeze
-  MAX_GUN_TURN = 30.freeze
-  MAX_RADAR_TURN = 60.freeze
-  MAX_SPEED = 8.freeze
-  BULLET_SPPED = 30.freeze
+  MAX_TURN = 10.0.freeze
+  MAX_GUN_TURN = 30.0.freeze
+  MAX_RADAR_TURN = 60.0.freeze
+  MAX_SPEED = 8.0.freeze
+  BULLET_SPPED = 30.0.freeze
   FIRE_POWR_RATIO = 3.3.freeze
-  HIT_RANGE = 40.freeze
+  HIT_RANGE = 40.0.freeze
 
   def position
     @position ||= {x: x, y: y}
@@ -121,9 +121,9 @@ module Util
     [[current + acceleration, 8].min, -8].max
   end
 
-  def reachable_distance(speed, tick)
-    forward = speed
-    back = speed
+  def reachable_distance(prospect_speed, tick)
+    forward = prospect_speed
+    back = prospect_speed
     distances = [0, 0]
     tick.times.each do
       forward = next_speed(forward, 1)
@@ -143,16 +143,16 @@ module Util
   end
 
   def my_future_position
-    @my_future_position ||= to_point (heading + @turn_angle), next_speed(@speed, @acceleration), position
+    @my_future_position ||= to_point (heading + @turn_angle), next_speed(speed, @acceleration), position
   end
 
   def new_my_context
     {
       latest: time,
-      speed: @speed,
-      heading: @heading,
-      prospect_speed: @speed,
-      prospect_heading: @heading,
+      speed: speed,
+      heading: heading,
+      prospect_speed: speed,
+      prospect_heading: heading,
       prospect_point: position,
       acceleration: {
         heading: @prev_turn_angle,
@@ -395,10 +395,13 @@ class Kubota
 
   def initial
     debug("gun: #{gun_heading}", "radar: #{radar_heading}")
+    @acceleration = 0
+    @turn_angle = 0
+    @turn_gun_angle = 0
     @prev_radar_heading = radar_heading
     @durable_context[:robots] ||= {}
     @durable_context[:robots].each do |name, robot|
-      robot[:latest] = 0
+      robot[:latest] = -1
       robot[:energy] = 100
       robot[:prospect_point] = center
       robot[:acceleration] = nil
@@ -765,9 +768,19 @@ class Kubota
     end
     @turn_gun_angle = max_turn diff_direction(target_direction, gun_heading + @turn_angle), MAX_GUN_TURN
     turn_gun @turn_gun_angle
+  rescue => e
+    p '*******'
+    p time
+    p e
+    p e.backtrace
+    p "max_turn diff_direction(#{target_direction}, #{gun_heading} + #{@turn_angle}), #{MAX_GUN_TURN}"
+    p target_future
   end
 
   def aim(power)
+# TODO
+aim_type = :straight_24
+
     aim_type = @lockon_target[:aim_type]
     if aim_type == :accelerated
       fire_or_turn power do |target_future|
@@ -880,40 +893,45 @@ class Kubota
 
   def prospect_next_by_straight(robot, range = 0)
     return robot unless robot[:prospect_speed]
-    speed = robot[:prospect_speed]
-    heading = robot[:prospect_heading]
+    prospect_speed = robot[:prospect_speed]
+    prospect_heading = robot[:prospect_heading]
     if range > 0 and robot[:logs][-range]
       past = robot[:logs][-range]
       ticks = robot[:latest] - past[:time]
-      speed = distance(past[:prospect_point], robot[:prospect_point]) / ticks
-      heading = to_direction(past[:prospect_point], robot[:prospect_point])
+      return robot if ticks <= 0
+      prospect_speed = distance(past[:prospect_point], robot[:prospect_point]) / ticks
+      prospect_heading = to_direction(past[:prospect_point], robot[:prospect_point])
     end
-    point = to_point heading, speed, robot[:prospect_point]
+    point = to_point prospect_heading, prospect_speed, robot[:prospect_point]
     eval_wall point
     {
       latest: robot[:latest] + 1,
-      speed: speed,
-      heading: heading,
-      prospect_speed: speed,
-      prospect_heading: heading,
+      speed: prospect_speed,
+      heading: prospect_heading,
+      prospect_speed: prospect_speed,
+      prospect_heading: prospect_heading,
       prospect_point: point,
-      acceleration: robot[:acceleration],
+      acceleration: {
+        speed: 0,
+        heading: 0,
+        energy: 0
+      },
       logs: [],
     }
   end
 
   def prospect_next_by_acceleration(robot)
     return robot unless robot[:acceleration]
-    speed = next_speed robot[:prospect_speed], robot[:acceleration][:speed]
-    heading = robot[:prospect_heading] + robot[:acceleration][:heading]
-    point = to_point heading, speed, robot[:prospect_point]
+    prospect_speed = next_speed robot[:prospect_speed], robot[:acceleration][:speed]
+    prospect_heading = robot[:prospect_heading] + robot[:acceleration][:heading]
+    point = to_point prospect_heading, prospect_speed, robot[:prospect_point]
     eval_wall point
     {
       latest: robot[:latest] + 1,
-      speed: speed,
-      heading: heading,
-      prospect_speed: speed,
-      prospect_heading: heading,
+      speed: prospect_speed,
+      heading: prospect_heading,
+      prospect_speed: prospect_speed,
+      prospect_heading: prospect_heading,
       prospect_point: point,
       acceleration: robot[:acceleration],
       logs: [],
@@ -1196,21 +1214,22 @@ class Kubota
       robot = @robots[scanned[:name]]
       if robot[:latest]
         next if robot[:latest] >= scanned_time
+        diff_ticks = (scanned_time - robot[:latest])
         diff = distance(robot[:point], point)
-        speed = diff / (scanned_time - robot[:latest])
-        heading = robot[:heading]
-        heading = to_direction(robot[:point], point) if !heading or speed > 0.001
+        prospect_speed = diff / diff_ticks
+        prospect_heading = robot[:heading]
+        prospect_heading = to_direction(robot[:point], point) if !prospect_heading or prospect_speed > 0.001
         if robot[:speed]
           robot[:acceleration] = {
-            speed: (speed - robot[:speed]) / (scanned_time - robot[:latest]),
-            heading: diff_direction(heading, robot[:heading]) / (scanned_time - robot[:latest]),
+            speed: (prospect_speed - robot[:speed]) / diff_ticks,
+            heading: diff_direction(prospect_heading, robot[:heading]) / diff_ticks,
             energy: scanned[:energy] - robot[:energy]
           }
         end
-        robot[:speed] = speed
-        robot[:heading] = heading
-        robot[:prospect_speed] = speed
-        robot[:prospect_heading] = heading
+        robot[:speed] = prospect_speed
+        robot[:heading] = prospect_heading
+        robot[:prospect_speed] = prospect_speed
+        robot[:prospect_heading] = prospect_heading
       end
       robot[:energy] = scanned[:energy]
       robot[:zombi_tick] = 0 if robot[:energy] > ZOMBI_ENERGY
