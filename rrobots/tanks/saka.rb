@@ -1,14 +1,21 @@
 require 'rrobots'
 
 module SakaUtil
+  module Constants
+    MAX_HISTORIES = 100
+    MAX_FIRE = 3
+    BULLET_SPEED = 30
+    MAX_GUN_ROTATE = 30
+    MAX_RADAR_ROTATE = 60
+    MAX_BODY_ROTATE = 10
+    MAX_SPEED = 8
+  end
   module Utility
     private
 
     def normalize_rotation(rotation)
-      rotation = rotation.remainder(360)
-      return -(360 - rotation) if rotation > 180
-      return 360 + rotation if rotation < -180
-      rotation
+      rotation = (rotation + 360 * 100000) % 360
+      rotation < 180 ? rotation : -(360 - rotation)
     end
 
     def to_angle(radian)
@@ -20,22 +27,38 @@ module SakaUtil
       diff_y = b[:y] - a[:y]
       to_angle(Math.atan2(diff_y, diff_x) - Math::PI)
     end
+
+    def to_distance(a, b)
+      Math::hypot(a[:x] - b[:x], b[:y] - a[:y])
+    end
     def trace(message)
       method_name = caller_locations(1,1)[0].label
       puts "#{method_name}: #{message}"
     end
-    def debug_draw(x, y, size)
+    def debug_draw(x, y, size, color = 0xffffff00)
       scale = 0.5
       x *= scale
       y *= scale
       size *= scale
-      Gosu.draw_rect(x - size / 2, y - size/ 2, size, size, 0xffffff00, ZOrder::UI + 1)
+      Gosu.draw_rect(x - size / 2, y - size/ 2, size, size, color, ZOrder::UI + 1)
+    end
+
+    def nearest_direction(direction, base_direction)
+      nearest = direction
+      (-10..10).each do |mul|
+        alt = direction + mul * 360
+        nearest = alt if (alt - base_direction).abs < (nearest - base_direction).abs
+      end
+      nearest
     end
   end
 end
 class Saka
   include Robot
   include SakaUtil::Utility
+  include SakaUtil::Constants
+
+  DEBUG_FIRE = true
 
   class History
     attr_accessor :x, :y, :energy, :fired
@@ -58,75 +81,135 @@ class Saka
     end
   end
 
-  class DiffList
+  class NextPositionStrategy
     include SakaUtil::Utility
+    include SakaUtil::Constants
     def self.from_history(histories)
-      DiffList.new(histories, true)
+      strategy = NextPositionStrategy.new(histories, true)
+      strategy.append(6)
+      strategy
     end
     def append(depth)
-      return if depth <= 0 or @list.size < 2 or is_approx_empty?(0.01)
+      return if depth <= 0 or @list.size < 2 or is_approx_empty?(0.05, 0.5)
       list = []
       @list.inject do |prev, cur|
-        list << create_diff(prev, cur)
+        list << create_diff(prev, cur, @list.last, false)
         cur
       end
-      @parent = DiffList.new list
+      @parent = NextPositionStrategy.new list
       @parent.append(depth - 1)
     end
-    def next(x, y)
-      diff = next_diff
-      commit_next diff
-      {
-        x: diff[:x] + x,
-        y: diff[:y] + y
-      }
+    def dump_next
+      (1..@next_start).each do |generation|
+        history = get_next(generation)
+        debug_draw(history[:x] - 2, history[:y] - 2, 5, 0xffffffff)
+      end
+    end
+    def get_next(generation)
+      return @list[@next_start - generation] if @next_start >= generation
+      (@next_start...generation).each do |i|
+        self.add_next
+      end
+      return @list.first
     end
 
-    def next_diff
-      ret = @parent&.next_diff || {x: 0, y: 0}
-      ret[:x] += @list.first[:x]
-      ret[:y] += @list.first[:y]
-      ret
-    end
-
-    def commit_next(diff)
-      parent_diff = {
-        x: diff[:x] - @list.first[:x],
-        y: diff[:y] - @list.first[:y]
+    def add_next
+      vec = get_next_vector
+      from = @list.first
+      direction = nearest_direction(vec[:direction], from[:direction])
+      angle_rad = direction.to_rad
+      distance = vec[:speed]
+      distance = 0 if distance < 0
+      distance = MAX_SPEED if distance > MAX_SPEED
+      to = {
+        x: Math::cos(angle_rad) * distance + from[:x],
+        y: -Math::sin(angle_rad) * distance + from[:y]
       }
+      diff = create_diff(to, from, @list.first, true)
       @list.insert(0, diff)
-      @parent&.commit_next parent_diff
+      @next_start += 1
+      @parent&.append_next(@list[0], @list[1])
+    end
+
+    def get_next_vector(depth = 0)
+      my_vec = {
+        speed: @list.first[:speed],
+        direction: @list.first[:direction]
+      }
+      if depth > 0
+        sub_list = @list.slice(1, depth * 3)
+        sub_list.each do |item|
+          my_vec[:speed] += item[:speed]
+          my_vec[:direction] += item[:direction]
+        end
+        my_vec[:speed] /= sub_list.size + 1
+        my_vec[:direction] /= sub_list.size + 1
+      end
+      if @parent
+        parent_vec = @parent.get_next_vector(depth + 1)
+        if parent_vec
+          my_vec[:speed] += parent_vec[:speed]
+          my_vec[:direction] += parent_vec[:direction]
+          return my_vec
+        end
+      end
+      my_vec
+    end
+
+    def append_next(to, from)
+      @list.insert(0, create_diff(to, from, @list.first,false))
+      @next_start += 1
+      @parent&.append_next(@list[0], @list[1])
+    end
+
+    def reset
+      @list.slice!(0, @next_start)
+      @next_start = 0
+      @parent&.reset
     end
 
     private
-    def is_approx_empty?(diff)
+    def is_approx_empty?(speed_diff, direction_diff)
       @list.inject do |prev, cur|
         diff_x, diff_y = prev[:x] - cur[:x], prev[:y] - cur[:y]
-        if diff_x.abs > diff or diff_y.abs > diff
+        if (prev[:speed] - cur[:speed]).abs > speed_diff \
+          or (prev[:direction] - cur[:direction]).abs > direction_diff
           return false
         end
         cur
       end
       return true
     end
-    def create_diff(to, from)
+    def create_diff(to, from, last_entry, is_root)
       to_x, to_y = to[:x], to[:y]
       from_x, from_y = from[:x], from[:y]
       move_x, move_y = to_x - from_x, to_y - from_y
+      if is_root
+        direction = to_direction(from, to)
+        if last_entry and last_entry[:direction]
+          last_direction = last_entry[:direction]
+          direction = nearest_direction(direction, last_direction)
+        end
+      else
+        direction = nearest_direction(to[:direction], from[:direction]) - from[:direction]
+      end
       {
-        x: move_x,
-        y: move_y,
-        speed: Math.hypot(move_x, move_y),
-        direction: to_direction(from, to)
+        x: to_x,
+        y: to_y,
+        move_x: move_x,
+        move_y: move_y,
+        speed: is_root ? Math.hypot(move_x, move_y) : (to[:speed] - from[:speed]),
+        direction: direction
       }
     end
     def initialize(listOrHistory, is_history = false)
       @list = listOrHistory
+      @next_start = 0
       return unless is_history
       @list = []
       listOrHistory.reverse.inject do |prev, cur|
-        break if @list.size > 20 or cur.nil?
-        @list << create_diff(prev, cur)
+        break if cur.nil?
+        @list << create_diff(prev, cur, @list.last, true)
         cur
       end
     end
@@ -151,47 +234,14 @@ class Saka
     turn_gun MAX_GUN_ROTATE
     turn_radar MAX_RADAR_ROTATE - MAX_GUN_ROTATE
   end
-=begin
-  @events['robot_scanned'] << {
-    distance: Math.hypot(@y - other.y, other.x - @x),
-    direction: to_direction({x: @x, y: @y}, {x: other.x, y: other.y}),
-    energy: other.energy,
-    name: other.name
-  }
-=end
   def next_history(generation)
     return @histories[generation - 1] if generation <= 0
-    # return @histories.last
     return @histories.last if @histories.size <= 1
-    @next_histories ||= []
-    return @next_histories[generation - 1] if generation <= @next_histories.size
-    diff = DiffList.from_history(@histories)
-    diff.append(5)
-    generation = [@next_histories.size + @next_histories.size / 2, generation].max
-    @next_histories.clear
-    last_history = @histories.last
-    generation.times do |index|
-      next_pos = diff.next(last_history.x, last_history.y)
-      if next_pos[:x] < size / 2 || next_pos[:x] > (battlefield_width - size / 2) || \
-        next_pos[:y] < size / 2 || next_pos[:y] > (battlefield_height - size / 2)
-        break
-      end
-      last_history = History.new({}, next_pos[:x], next_pos[:y])
-      @next_histories << last_history
-    end
-    while @next_histories.size < generation
-      @next_histories << last_history
-    end
-    return @next_histories[generation - 1]
+    @next_histories ||= NextPositionStrategy.from_history @histories
+    next_history = @next_histories.get_next(generation)
+    History.new({}, next_history[:x], next_history[:y])
   end
-private
-  MAX_HISTORIES = 30
-  MAX_FIRE = 3
-  BULLET_SPEED = 30
-  MAX_GUN_ROTATE = 30
-  MAX_RADAR_ROTATE = 60
-  MAX_BODY_ROTATE = 10
-  MAX_SPEED = 8
+  private
 
   def process_scanned(robots)
     return false if robots.empty?
@@ -199,7 +249,6 @@ private
 
     history = add_current_history(robot)
     @next_histories = nil
-    next_history 20
     try_fire()
     new_state = move()
     adjust_gun_heading(new_state)
@@ -217,8 +266,6 @@ private
     if @histories.size > MAX_HISTORIES
       @histories.delete_at(0)
     end
-    # puts "pos = #{new_x}, #{new_y}"
-    # debug_draw(new_x, new_y, size)
     history
   end
   def move
@@ -261,67 +308,96 @@ private
     }
   end
   def adjust_gun_heading(new_state)
-    bullet_distance = BULLET_SPEED
-    generation = 1
-    loop do
-      history = next_history generation
-      if history.distance_from(self) <= bullet_distance
-        target_direction = to_direction(new_state, history)
-        gun_rotation = normalize_rotation(target_direction - self.gun_heading)
-        if gun_rotation.abs >= MAX_GUN_ROTATE
-          gun_rotation = gun_rotation > 0 ? MAX_GUN_ROTATE : -MAX_GUN_ROTATE
-        end
-        turn_gun(gun_rotation)
-        new_state[:gun_heading] = self.gun_heading + gun_rotation
-        break
-      end
-      bullet_distance += BULLET_SPEED
-      generation += 1
+    history = history_for_bullet
+    return false if history.nil?
+    target_direction = to_direction(new_state, history)
+    gun_rotation = normalize_rotation(target_direction - self.gun_heading)
+    if gun_rotation.abs >= MAX_GUN_ROTATE
+      gun_rotation = gun_rotation > 0 ? MAX_GUN_ROTATE : -MAX_GUN_ROTATE
     end
+    turn_gun(gun_rotation)
+    new_state[:gun_heading] = self.gun_heading + gun_rotation
+    true
   end
   def adjust_radar_heading(new_state)
     history = next_history 1
     target_direction = to_direction(new_state, history)
     radar_rotation = normalize_rotation(target_direction - self.radar_heading)
     if radar_rotation.abs <= (MAX_RADAR_ROTATE / 2)
-       radar_rotation = radar_rotation + (radar_rotation > 0 ? MAX_RADAR_ROTATE / 2 : -MAX_RADAR_ROTATE / 2)
+      radar_rotation = radar_rotation + (radar_rotation > 0 ? MAX_RADAR_ROTATE / 2 : -MAX_RADAR_ROTATE / 2)
     else
       radar_rotation = radar_rotation > 0 ? MAX_RADAR_ROTATE : -MAX_RADAR_ROTATE
     end
     turn_radar(radar_rotation)
     new_state[:radar_heading] = self.radar_heading + radar_rotation
   end
-  def try_fire
-    return false if gun_heat > 0
+  def history_for_bullet
+    my_pos = {x: self.x, y: self.y}
+    max_distance = [
+      to_distance(my_pos, {x: 0, y:0}),
+      to_distance(my_pos, {x: battlefield_width, y:0}),
+      to_distance(my_pos, {x: battlefield_width, y:battlefield_height}),
+      to_distance(my_pos, {x: 0, y:battlefield_height})
+    ].sort!.last
     bullet_distance = BULLET_SPEED
-    generation = 1
-    loop do
+    max_generations = (max_distance / BULLET_SPEED).to_i + 1
+    (1..max_generations).each do |generation|
       history = next_history generation
-      if history.distance_from(self) <= bullet_distance
-        target_directions = []
-        from = {x: self.x, y: self.y}
-        target_directions << to_direction(from, {x: history.x - size / 2, y: history.y - size / 2})
-        target_directions << to_direction(from, {x: history.x + size / 2, y: history.y - size / 2})
-        target_directions << to_direction(from, {x: history.x - size / 2, y: history.y + size / 2})
-        target_directions << to_direction(from, {x: history.x + size / 2, y: history.y + size / 2})
-        target_directions.sort!()
-        return false if self.gun_heading <= target_directions[0] or self.gun_heading >= target_directions[-1]
-
-        diff_from_target = self.gun_heading - to_direction(from, history)
-        target_range = target_directions[-1] - target_directions[0]
-        possibility = (target_range / 2 - diff_from_target.abs) / (target_range / 2)
-        if bullet_distance < size * 2
-          possibility = 1
-        elsif bullet_distance < size * 4
-          possibility = [possibility * 3, 1].min
-        elsif bullet_distance < size * 8
-          possibility = [possibility * 2, 1].min
-        end
-        fire possibility * MAX_FIRE
-        return true
-      end
+      break if history.nil?
+      return history if history.distance_from(self) <= bullet_distance
       bullet_distance += BULLET_SPEED
-      generation += 1
+    end
+    trace("history_for_bullet : not found max=#{max_generations}")
+    nil
+  end
+  def try_fire
+    unless DEBUG_FIRE
+      return false if gun_heat > 0
+    end
+    history = history_for_bullet
+    return false if history.nil?
+
+    if DEBUG_FIRE
+      @next_histories.dump_next if @next_histories
+      dump_target_histories(@histories) if @histories
+    end
+
+    bullet_distance = history.distance_from(self)
+    target_directions = []
+    from = {x: self.x, y: self.y}
+    target_directions << to_direction(from, {x: history.x - size / 2, y: history.y - size / 2})
+    target_directions << to_direction(from, {x: history.x + size / 2, y: history.y - size / 2})
+    target_directions << to_direction(from, {x: history.x - size / 2, y: history.y + size / 2})
+    target_directions << to_direction(from, {x: history.x + size / 2, y: history.y + size / 2})
+    target_directions.sort!()
+    if self.gun_heading <= target_directions.first or self.gun_heading >= target_directions.last
+      if DEBUG_FIRE
+        debug_draw history.x, history.y, 1 * size, 0xff00ffff
+      end
+      return false
+    end
+
+    diff_from_target = self.gun_heading - to_direction(from, history)
+    target_range = target_directions[-1] - target_directions[0]
+    possibility = (target_range / 2 - diff_from_target.abs) / (target_range / 2)
+    if bullet_distance < size * 2
+      possibility = 1
+    elsif bullet_distance < size * 4
+      possibility = [possibility * 3, 1].min
+    elsif bullet_distance < size * 8
+      possibility = [possibility * 2, 1].min
+    end
+    strength = possibility * MAX_FIRE
+    fire strength
+
+    if DEBUG_FIRE
+      debug_draw Math::cos(self.gun_heading.to_rad) * history.distance_from(self) + x, -Math::sin(self.gun_heading.to_rad) * history.distance_from(self) + y, strength * size
+    end
+    true
+  end
+  def dump_target_histories(histories)
+    histories.each do |history|
+      debug_draw(history[:x] - 2, history[:y] - 2, 5, 0xffff0000)
     end
   end
 end
