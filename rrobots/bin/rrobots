@@ -58,8 +58,6 @@ class OptionsParser
 end
 
 def run_out_of_gui(battlefield)
-  $stderr.puts 'match ends if only 1 bot/team left or dots get here-->|'
-
   until battlefield.game_over
     battlefield.tick
     $stderr.print "." if battlefield.time % (battlefield.timeout / 54).to_i == 0

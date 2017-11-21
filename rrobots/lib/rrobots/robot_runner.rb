@@ -126,7 +126,7 @@ class RobotRunner
   end
 
   def teleport(distance_x=(@battlefield.width/2)-@size*2, distance_y=(@battlefield.height/2)-@size*2)
-    10.times.each do
+    20.times.each do
       x = @x + ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
       y = @y + ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
       next if @battlefield.robots.any? do |robot|
