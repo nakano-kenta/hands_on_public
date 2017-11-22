@@ -13,13 +13,18 @@ module SakaUtil
   module Utility
     private
 
-    def normalize_rotation(rotation)
-      rotation = (rotation + 360 * 100000) % 360
-      rotation < 180 ? rotation : -(360 - rotation)
+    def to_angle(radian)
+      to_positive_direction radian * 180.0 / Math::PI
     end
 
-    def to_angle(radian)
-      (radian * 180.0 / Math::PI + 360 * 10000) % 360
+    def to_positive_direction(direction)
+      direction = direction + ((-direction / 360).to_i + 1) * 360 if direction < 0
+      direction % 360
+    end
+
+    def to_min_direction(direction)
+      direction = to_positive_direction(direction)
+      direction <= 180 ? direction : direction - 360
     end
 
     def to_direction(a, b)
@@ -35,19 +40,28 @@ module SakaUtil
       method_name = caller_locations(1,1)[0].label
       puts "#{method_name}: #{message}"
     end
-    def debug_draw(x, y, size, color = 0xffffff00)
+    def debug_draw_point(x, y, size, color = 0xffffff00)
       scale = 0.5
       x *= scale
       y *= scale
       size *= scale
       Gosu.draw_rect(x - size / 2, y - size/ 2, size, size, color, ZOrder::UI + 1)
     end
+    def debug_draw_point_by_degree(src, degree, distance, size, color = 0xffffff00)
+      x = src.is_a?(Robot) ? src.x : src[:x]
+      y = src.is_a?(Robot) ? src.y : src[:y]
+      degree_rad = degree.to_rad
+      debug_draw_point Math::cos(degree_rad) * distance + x, -Math::sin(degree_rad) * distance + y, size, color
+    end
 
     def nearest_direction(direction, base_direction)
       nearest = direction
       nearest_diff = (direction - base_direction).abs
       return direction if nearest_diff.abs < 180
-      (-5..5).each do |mul|
+
+      direction = to_positive_direction(direction) + (base_direction / 360).to_i * 360
+      nearest_diff = (direction - base_direction).abs
+      (-2..2).each do |mul|
         alt = direction + mul * 360
         diff = (alt - base_direction).abs
         if diff < nearest_diff
@@ -108,7 +122,7 @@ class Saka
     def dump_next
       (1..@next_start).each do |generation|
         history = get_next(generation)
-        debug_draw(history[:x] - 2, history[:y] - 2, 5, 0xffffffff)
+        debug_draw_point(history[:x] - 2, history[:y] - 2, 5, 0xffffffff)
       end
     end
     def get_next(generation)
@@ -282,7 +296,7 @@ class Saka
 
     history = next_history 1
     target_direction = to_direction({x: self.x, y: self.y}, history)
-    desired_rotation = normalize_rotation(target_direction - self.heading)
+    desired_rotation = to_min_direction(target_direction - self.heading)
     adjusted_rotation = desired_rotation
     if adjusted_rotation.abs >= MAX_BODY_ROTATE
       adjusted_rotation = adjusted_rotation > 0 ? MAX_BODY_ROTATE : -MAX_BODY_ROTATE
@@ -317,7 +331,7 @@ class Saka
     history = history_for_bullet
     return false if history.nil?
     target_direction = to_direction(new_state, history)
-    gun_rotation = normalize_rotation(target_direction - self.gun_heading)
+    gun_rotation = to_min_direction(target_direction - self.gun_heading)
     if gun_rotation.abs >= MAX_GUN_ROTATE
       gun_rotation = gun_rotation > 0 ? MAX_GUN_ROTATE : -MAX_GUN_ROTATE
     end
@@ -328,7 +342,7 @@ class Saka
   def adjust_radar_heading(new_state)
     history = next_history 1
     target_direction = to_direction(new_state, history)
-    radar_rotation = normalize_rotation(target_direction - self.radar_heading)
+    radar_rotation = to_min_direction(target_direction - self.radar_heading)
     if radar_rotation.abs <= (MAX_RADAR_ROTATE / 2)
       radar_rotation = radar_rotation + (radar_rotation > 0 ? MAX_RADAR_ROTATE / 2 : -MAX_RADAR_ROTATE / 2)
     else
@@ -378,7 +392,7 @@ class Saka
     target_directions.sort!()
     if self.gun_heading <= target_directions.first or self.gun_heading >= target_directions.last
       if DEBUG_FIRE
-        debug_draw history.x, history.y, 1 * size, 0xff00ffff
+        debug_draw_point history.x, history.y, 1 * size, 0xff00ffff
       end
       return false
     end
@@ -397,13 +411,13 @@ class Saka
     fire strength
 
     if DEBUG_FIRE
-      debug_draw Math::cos(self.gun_heading.to_rad) * history.distance_from(self) + x, -Math::sin(self.gun_heading.to_rad) * history.distance_from(self) + y, strength * size
+      debug_draw_point_by_degree self, gun_heading, history.distance_from(self), strength * size
     end
     true
   end
   def dump_target_histories(histories)
     histories.each do |history|
-      debug_draw(history[:x] - 2, history[:y] - 2, 5, 0xffff0000)
+      debug_draw_point(history[:x] - 2, history[:y] - 2, 5, 0xffff0000)
     end
   end
 end
