@@ -10,9 +10,12 @@ class Yamaguchi
   MAX_ROBO_SPEED = 8
   MIN_ROBO_SPEED = -8
 
+  AWAY_THRESHOLD = 400
+  ABOID_WALL_THRESHOLD = 92
+
   def tick(events)
     @log_by_robo = {} if time == 0
-    @aim = [] if time == 0
+    @targets = [] if time == 0
     search_enemies
     set_run_params
     set_aim
@@ -60,6 +63,7 @@ class Yamaguchi
       diff_radar_direction = events['robot_scanned'].min_by { |log| log[:distance] }[:direction] - radar_heading
       @scan_direction = optimize_angle(diff_radar_direction) * 2
     end
+    @scan_direction = MAX_ANGLE_OF_RADAR if num_robots > 2 and (54..59).cover?(time % 60)
   end
 
   def set_run_params
@@ -80,7 +84,7 @@ class Yamaguchi
     end
     close_enemy = recent_logs.min_by { |log| log[:distance] }
     counter_angle = 90
-    near_enemy = ( 1000 > close_enemy[:distance] ? 1 : -1 )
+    near_enemy = ( 800 > close_enemy[:distance] ? 1 : -1 )
     near_enemy *= @progress_direction
     counter_angle += (20 * near_enemy)
     @enemy_stop_at[close_enemy[:name]] ||= time if close_enemy[:energy] < 1
@@ -90,7 +94,23 @@ class Yamaguchi
     @acceleration = @progress_direction
     @acceleration = 1 if close_enemy[:energy] < 1 and @log_by_robo[close_enemy[:name]][-10] and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
     @progress_direction *= -1 unless events[:crash_into_wall].empty?
-    @progress_direction *= -1 unless events[:crash_into_enemy].empty?
+
+    if Math::hypot(x - close_enemy[:x], (battlefield_height - y) - close_enemy[:y]) < AWAY_THRESHOLD and close_enemy[:energy] > 1 and close_enemy[:heading]
+      @turn_direction = diff_direction( {x: x, y: (battlefield_height - y)}, {x: close_enemy[:x], y: close_enemy[:y]} ) - heading
+      if x < ABOID_WALL_THRESHOLD or x > battlefield_height - ABOID_WALL_THRESHOLD or y < ABOID_WALL_THRESHOLD or y > battlefield_height - ABOID_WALL_THRESHOLD
+        @acceleration = 1
+      else
+        @acceleration = -1
+      end
+      turn_gun_direction = diff_direction( {x: x, y: (battlefield_height - y)}, {x: close_enemy[:x], y: close_enemy[:y]} ) - gun_heading
+      turn_gun_direction = optimize_angle(turn_gun_direction)
+      turn_gun_direction += (turn_gun_direction * @turn_direction > 1 ? @turn_direction : -@turn_direction)
+      @turn_gun_direction = turn_gun_direction
+      @duration = time
+      @brain_muscle = true
+      return
+    end
+
     @duration ||= 0
     if time - @duration > 0
       @progress_direction *= -1
@@ -99,6 +119,11 @@ class Yamaguchi
   end
 
   def set_aim
+    if @brain_muscle
+      fire 3 if @turn_gun_direction.abs <= 30
+      @brain_muscle = false
+      return
+    end
     @singular_points = {}
     @log_by_robo.each do |name, robo_log|
       next if robo_log.size < 4
@@ -108,7 +133,7 @@ class Yamaguchi
     end
     @singular_points.each do |name, singular_point|
       next if singular_point.size < 2
-      @aim << {
+      @targets << {
         name: name,
         time: time,
         hit_time: time + (singular_point.last[:time] - singular_point[-2][:time]),
@@ -116,11 +141,12 @@ class Yamaguchi
         y: singular_point.last[:y],
         singular: true
       }
+      return
     end
     target = @log_by_robo.map { |name, logs| time == logs.last[:time] ? logs.last : nil }.compact.min_by { |log| log[:distance] }
     return if !target or @log_by_robo[target[:name]].size < 4
     robo_log = @log_by_robo[target[:name]]
-    time_to_be_hit = 30 + robo_log.last[:distance] / BULLET_SPEED
+    time_to_be_hit = 25 + robo_log.last[:distance] / BULLET_SPEED
     nextx = calc_spot(robo_log.last[:x], robo_log.last[:x_speed], robo_log.last[:x_acceleration], time_to_be_hit)
     nexty = calc_spot(robo_log.last[:y], robo_log.last[:y_speed], robo_log.last[:y_acceleration], time_to_be_hit)
     if robo_log.last[:radius] and robo_log[-2][:radius] and (robo_log.last[:radius] - robo_log[-2][:radius]).abs < 100
@@ -128,7 +154,7 @@ class Yamaguchi
       nexty = robo_log.last[:y] + robo_log.last[:radius] * Math.sin(robo_log.last[:angle_to_circle].to_rad + robo_log.last[:angular_speed].to_rad * time_to_be_hit) - robo_log.last[:radius] * Math.sin(robo_log.last[:angle_to_circle].to_rad)
     end
     return if 0 > nextx or battlefield_height < nextx or 0 > nexty or battlefield_width < nexty
-    @aim << {
+    @targets << {
       name: target[:name],
       time: time,
       hit_time: time + time_to_be_hit,
@@ -140,10 +166,9 @@ class Yamaguchi
   end
 
   def attack
-    @aim.delete_if { |aim| 10 < time - aim[:time] }
-    @aim.delete_if { |v| !@log_by_robo.keys.include?(v[:name]) }
+    @targets.delete_if { |target| !@log_by_robo.keys.include?(target[:name]) }
     @next_aim = nil if @next_aim and !@log_by_robo.keys.include?(@next_aim[:name])
-    @next_aim ||= @aim.first
+    @next_aim ||= @targets.last unless @targets.empty?
     return unless @next_aim
     if !@next_aim[:singular] and \
       (@next_aim[:x_acceleration] * @log_by_robo[@next_aim[:name]].last[:x_acceleration] < 0 or \
@@ -171,7 +196,7 @@ class Yamaguchi
           forecast_x = @log_by_robo[@next_aim[:name]].last[:x] + @log_by_robo[@next_aim[:name]].last[:radius] * Math.cos(@log_by_robo[@next_aim[:name]].last[:angle_to_circle].to_rad + @log_by_robo[@next_aim[:name]].last[:angular_speed].to_rad * bullet_duration) - @log_by_robo[@next_aim[:name]].last[:radius] * Math.cos(@log_by_robo[@next_aim[:name]].last[:angle_to_circle].to_rad)
           forecast_y = @log_by_robo[@next_aim[:name]].last[:y] + @log_by_robo[@next_aim[:name]].last[:radius] * Math.sin(@log_by_robo[@next_aim[:name]].last[:angle_to_circle].to_rad + @log_by_robo[@next_aim[:name]].last[:angular_speed].to_rad * bullet_duration) - @log_by_robo[@next_aim[:name]].last[:radius] * Math.sin(@log_by_robo[@next_aim[:name]].last[:angle_to_circle].to_rad)
         end
-        fire (@log_by_robo[@next_aim[:name]].last[:energy] > 20 ? 3 : @log_by_robo[@next_aim[:name]].last[:energy]/3.3 - 0.5) if num_robots > 1 and (@next_aim[:singular] or ((forecast_x - @next_aim[:x]).abs < 50 and (forecast_y - @next_aim[:y]).abs < 50))
+        fire (@log_by_robo[@next_aim[:name]].last[:energy] > 20 ? 3 : @log_by_robo[@next_aim[:name]].last[:energy]/3.3 - 0.5) if num_robots > 1 and (@next_aim[:singular] or ((forecast_x - @next_aim[:x]).abs < 100 and (forecast_y - @next_aim[:y]).abs < 100))
         @next_aim = nil
       end
     end
