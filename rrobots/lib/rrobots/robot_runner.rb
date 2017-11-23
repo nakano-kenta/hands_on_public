@@ -83,15 +83,15 @@ class RobotRunner
       @leader = true
       @energy *= 2
     end
-    if @leader == false
+    if @leader == true
+      teleport
+    else
       leader = @battlefield.robots.select {|robot|
         robot.uniq_name == @robot.team_members.first
       }.first
       @x = leader.x
       @y = leader.y
-      teleport (@battlefield.width/4)-@size*2, (@battlefield.height/4)-@size*2
-    else
-      teleport
+      teleport (@battlefield.width/4)-@size*2, (@battlefield.height/4)-@size*2, @size*2
     end
   end
 
@@ -125,18 +125,35 @@ class RobotRunner
     @friend_ram_kills = 0
   end
 
-  def teleport(distance_x=(@battlefield.width/2)-@size*2, distance_y=(@battlefield.height/2)-@size*2)
-    20.times.each do
-      x = @x + ((SecureRandom.random_number-0.5) * 2 * distance_x).to_i
-      y = @y + ((SecureRandom.random_number-0.5) * 2 * distance_y).to_i
-      next if @battlefield.robots.any? do |robot|
-        unless robot.x == robot.prev_x
-          Math.hypot(robot.x - x, robot.y - y) < @size * 4
-        end
+  def random_axis(current, distance)
+    min_axis_distance=(((@size * 2) ** 2) / 2) ** 0.5 + 1
+    diff = SecureRandom.random_number * (distance - min_axis_distance) + min_axis_distance
+    if SecureRandom.random_number < 0.5
+      current - diff
+    else
+      current + diff
+    end
+  end
+
+  N_TRY = 100.freeze
+  def teleport(distance_x=(@battlefield.width/2)-@size*2, distance_y=(@battlefield.height/2)-@size*2, min_distance = @size * 5)
+    distance_x = [@size * 2, distance_x].max
+    distance_y = [@size * 2, distance_y].max
+    N_TRY.times.each do |i|
+      x = random_axis @x, distance_x
+      y = random_axis @y, distance_y
+      if @battlefield.robots.any? {|robot|
+          if robot.x == robot.prev_x
+            false
+          else
+            Math.hypot(robot.x - x, robot.y - y) < (min_distance + @size * 2.0 * (N_TRY - i) / N_TRY.to_f)
+          end
+        }
+      else
+        @x = x
+        @y = y
+        break
       end
-      @x = x
-      @y = y
-      break
     end
     @gun_heat = 3
     @heading = (SecureRandom.random_number * 360).to_i
