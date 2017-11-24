@@ -75,10 +75,20 @@ class Saka
   end
   def move target_history
     @move_strategy = nil unless @move_strategy and @move_strategy.target == target_history
-    if to_distance(self, target_history.next(0)) < size * 2
+    distance_units = to_distance(self, target_history.next(0)) / size
+    if distance_units < 2
       @move_strategy = SakaUtil::KamikazeMoveStrategy.new(self, target_history) unless @move_strategy.is_a?(SakaUtil::KamikazeMoveStrategy)
     else
-      @move_strategy = SakaUtil::RandomMoveToTargetStrategy.new(self, target_history) unless @move_strategy.is_a?(SakaUtil::RandomMoveToTargetStrategy)
+      max_direction = 60
+      if distance_units < 5
+        max_direction = 30
+      elsif distance_units < 10
+        max_direction = 45
+      end
+      if @move_strategy.is_a?(SakaUtil::RandomMoveToTargetStrategy)
+        @move_strategy = nil if @move_strategy.max_direction != max_direction
+      end
+      @move_strategy = SakaUtil::RandomMoveToTargetStrategy.new(self, target_history, max_direction) unless @move_strategy.is_a?(SakaUtil::RandomMoveToTargetStrategy)
     end
     if !@move_strategy.move
       @move_strategy = SakaUtil::RandomMoveToTargetStrategy.new(self, target_history)
