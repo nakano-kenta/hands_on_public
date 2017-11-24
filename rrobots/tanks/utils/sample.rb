@@ -126,9 +126,9 @@ module SampleUtil
     @nearest
   end
 
-  def advanced_shoot(&block)
+  def advanced_shoot(power, &block)
     if @will_fire
-      fire 3
+      fire power
       @will_fire = false
     end
     nearest = scan_for_fire
@@ -149,8 +149,8 @@ module SampleUtil
     end
   end
 
-  def shoot_uniform_speed
-    advanced_shoot do |nearest, ticks, point|
+  def shoot_uniform_speed(power = 3)
+    advanced_shoot power do |nearest, ticks, point|
       nx = (point[:x] - nearest[:point][:x]) / (time - @last_nearest) * ticks + point[:x]
       ny = (point[:y] - nearest[:point][:y]) / (time - @last_nearest) * ticks + point[:y]
       nangle = ((Math.atan2((ny - y), (x - nx)) - Math::PI) * 180.0 / Math::PI + 360) % 360
