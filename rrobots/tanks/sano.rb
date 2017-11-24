@@ -12,6 +12,8 @@ class Sano
   
   DIFF_ARRIVAL_DISTANCE_THRESHOLD = 15
   
+  NORMAL_TURN_DURATION = 10
+  NORMAL_ACCEL_DURATION = 20
   ATTACK_ACCEL = {:max => 1.0, :min => -0.5}
   
   def initialize
@@ -309,21 +311,20 @@ class Sano
 #       puts("default move")
       # デフォルトの移動
       
-      if time % 10 == 5
+      if time % NORMAL_ACCEL_DURATION < NORMAL_ACCEL_DURATION / 2
         @acceleration = rand(-1.0..1.0)
       else
         @acceleration = 0
       end
-      if time % 20 < 10
+      if time % NORMAL_TURN_DURATION < NORMAL_TURN_DURATION / 2
         @turn_direction = rand(-10..0)
       else
-        @turn_direction = rand(1..10)
+        @turn_direction = rand(0..10)
       end
        @turn_gun_direction = default_gun_angle
       return
     else
     
-      @acceleration = rand(-1.0..1.0)
       @acceleration = rand(ATTACK_ACCEL[:min]..ATTACK_ACCEL[:max])
 #       puts("fire")
       
