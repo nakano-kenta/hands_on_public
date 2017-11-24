@@ -86,7 +86,7 @@ class Yamaguchi
     counter_angle = 90
     near_enemy = ( 800 > close_enemy[:distance] ? 1 : -1 )
     near_enemy *= @progress_direction
-    counter_angle += (20 * near_enemy)
+    counter_angle += (10 * near_enemy)
     @enemy_stop_at[close_enemy[:name]] ||= time if close_enemy[:energy] < 1
     counter_angle = 0 if @enemy_stop_at[close_enemy[:name]] and time - @enemy_stop_at[close_enemy[:name]] > 50 and @log_by_robo[close_enemy[:name]][-10] and @log_by_robo[close_enemy[:name]][-10][:energy] < 1
     direction = diff_direction( {x: x, y: (battlefield_height - y)}, {x: close_enemy[:x], y: close_enemy[:y]} ) - heading - counter_angle
