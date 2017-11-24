@@ -10,7 +10,9 @@ class Sano
   MAX_TURN_GUN_DIRECTION = 30
   BULLET_SPEED = 30
   
-  DIFF_ARRIVAL_DISTANCE_THRESHOLD = 20
+  DIFF_ARRIVAL_DISTANCE_THRESHOLD = 15
+  
+  ATTACK_ACCEL = {:max => 1.0, :min => -0.5}
   
   def initialize
     @enemy_y = 0
@@ -322,6 +324,7 @@ class Sano
     else
     
       @acceleration = rand(-1.0..1.0)
+      @acceleration = rand(ATTACK_ACCEL[:min]..ATTACK_ACCEL[:max])
 #       puts("fire")
       
       # 攻撃対象が存在する場合、自機、砲塔の向きを調整する
