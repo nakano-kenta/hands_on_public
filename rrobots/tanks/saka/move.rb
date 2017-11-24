@@ -175,7 +175,7 @@ module SakaUtil
   class RandomMoveToTargetStrategy < MoveStrategyBase
     def initialize(owner, target)
       super
-      @max_direction = 30
+      @max_direction = 45
     end
 
     def calc_next
