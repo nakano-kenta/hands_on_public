@@ -768,19 +768,9 @@ class Kubota
     end
     @turn_gun_angle = max_turn diff_direction(target_direction, gun_heading + @turn_angle), MAX_GUN_TURN
     turn_gun @turn_gun_angle
-  rescue => e
-    p '*******'
-    p time
-    p e
-    p e.backtrace
-    p "max_turn diff_direction(#{target_direction}, #{gun_heading} + #{@turn_angle}), #{MAX_GUN_TURN}"
-    p target_future
   end
 
   def aim(power)
-# TODO
-aim_type = :straight_24
-
     aim_type = @lockon_target[:aim_type]
     if aim_type == :accelerated
       fire_or_turn power do |target_future|
@@ -858,6 +848,7 @@ aim_type = :straight_24
       end
       if energy < DANGER_ENERGY
         if @lockon_target[:distance] < TOTALLY_HIT_RANGE
+          @lockon_target[:aim_type] = :accelerated
           power = 3
         elsif @lockon_target[:energy] <= ZOMBI_ENERGY
         else
@@ -865,7 +856,10 @@ aim_type = :straight_24
           power = [power, energy / 2].min
         end
       else
-        power = 3 if @lockon_target[:distance] < TOTALLY_HIT_RANGE
+        if @lockon_target[:distance] < TOTALLY_HIT_RANGE
+          power = 3
+          @lockon_target[:aim_type] = :accelerated
+        end
       end
 
       say "Aiming #{@lockon_target[:aim_type]}"
@@ -1209,7 +1203,7 @@ aim_type = :straight_24
         got_hit_logs: [],
         logs: [],
         statistics: [],
-        zombi_ticks: 0,
+        zombi_tick: 0,
       }
       robot = @robots[scanned[:name]]
       if robot[:latest]

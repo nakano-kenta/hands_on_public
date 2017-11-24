@@ -223,87 +223,11 @@ class RobotRunner
     @time += 1
   end
 
-  def impact_to_damage(impact)
-    impact * impact / 10
-  end
-
-  def diff_angle(a, b)
-    diff = a - b
-    if diff > 180
-      diff -= 360
-    elsif diff < -180
-      diff += 360
-    end
-    diff
-  end
-
   def after_tick
     scan
     team_message
     speak
     broadcast
-    @battlefield.robots.each do |other|
-      if (other != self) && (!other.dead)
-        difference = Math.hypot(@y - other.y, other.x - @x)
-        if difference <= @size * 2 and !@events['crash_into_enemy'].any?{|event| event[:with] == other.uniq_name}
-          dx = Math::cos(@heading.to_rad) * @speed
-          dy = -Math::sin(@heading.to_rad) * @speed
-          other_dx = Math::cos(other.heading.to_rad) * other.speed
-          other_dy = -Math::sin(other.heading.to_rad) * other.speed
-          # @x = @prev_x + (dx + other_dx) / 4
-          # @y = @prev_y + (dy + other_dy) / 4
-
-          direction = to_direction({x: @prev_x, y: @prev_y}, {x: @x, y: @y})
-          # @speed = Math.hypot(@prev_y - @y, @x - @prev_x) * Math.cos(diff_angle(direction, @heading) / 180 * Math::PI)
-          after_move
-
-          # other.x = other.prev_x + (dx + other_dx) / 4
-          # other.y = other.prev_y + (dy + other_dy) / 4
-
-          other_direction = to_direction({x: other.prev_x, y: other.prev_y}, {x: other.x, y: other.y})
-
-          # other.speed = Math.hypot(other.prev_y - other.y, other.x - other.prev_x) * Math.cos(diff_angle(other_direction, other.heading) / 180 * Math::PI)
-          other.after_move
-          impact = Math.hypot(dy - other_dy, dx - other_dx)
-          damage = impact_to_damage(impact)
-          # @energy -= damage
-          # other.energy -= damage
-          if @team == other.team
-            @friend_ram_damage_given += damage
-            other.friend_ram_damage_given += damage
-            if other.dead
-              @friend_kills += 1
-              @friend_ram_kills += 1
-            end
-            if dead
-              other.friend_kills += 1
-              other.friend_ram_kills += 1
-            end
-          else
-            @ram_damage_given += damage
-            other.ram_damage_given += damage
-            if other.dead
-              @kills += 1
-              @ram_kills += 1
-            end
-            if dead
-              other.kills += 1
-              other.ram_kills += 1
-            end
-          end
-          @ram_damage_taken += damage
-          other.ram_damage_taken += damage
-          @events['crash_into_enemy'] << {
-            with: other.uniq_name,
-            damage: damage
-          }
-          other.events['crash_into_enemy'] << {
-            with: uniq_name,
-            damage: damage
-          }
-        end
-      end
-    end
   end
 
   def parse_actions
@@ -385,6 +309,8 @@ class RobotRunner
     @prev_heading = @heading
 
     @speed += @actions[:accelerate]
+    # @speed = [8, @speed - 2].max if @speed > 8
+    # @speed = [-8, @speed + 2].min if @speed < -8
     @speed = 8 if @speed > 8
     @speed = -8 if @speed < -8
 
@@ -392,6 +318,10 @@ class RobotRunner
     @y -= Math::sin(@heading.to_rad) * @speed
 
     after_move
+  end
+
+  def impact_to_damage(impact)
+    impact * impact / 10
   end
 
   def after_move
