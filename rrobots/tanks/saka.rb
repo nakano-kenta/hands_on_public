@@ -22,6 +22,7 @@ class Saka
   end
 
   def tick events
+    return if num_robots <= 1
     return if process_scanned events['robot_scanned']
     @move_strategy = SakaUtil::RandomMoveStrategy.new(self) unless @move_strategy.is_a?(SakaUtil::RandomMoveStrategy)
     @move_strategy.move
@@ -74,7 +75,7 @@ class Saka
   end
   def move target_history
     @move_strategy = nil unless @move_strategy and @move_strategy.target == target_history
-    if to_distance(self, target_history.next(0)) < size * 3
+    if to_distance(self, target_history.next(0)) < size * 2
       @move_strategy = SakaUtil::KamikazeMoveStrategy.new(self, target_history) unless @move_strategy.is_a?(SakaUtil::KamikazeMoveStrategy)
     else
       @move_strategy = SakaUtil::RandomMoveToTargetStrategy.new(self, target_history) unless @move_strategy.is_a?(SakaUtil::RandomMoveToTargetStrategy)

@@ -28,7 +28,7 @@ module SakaUtil
       ratio_y = 2*(1-ratio)*ratio*@pos1[:y] + ratio*ratio
       {
         x: (pos[:x] - @from[:x]) * (ratio_x / ratio) + @from[:x],
-        y: (pos[:x] - @from[:y]) * (ratio_y / ratio) + @from[:y]
+        y: (pos[:y] - @from[:y]) * (ratio_y / ratio) + @from[:y]
       }
     end
   end
@@ -36,6 +36,8 @@ module SakaUtil
   class MoveStrategy
     include SakaUtil::Utility
     include SakaUtil::Constants
+
+    DEBUG = false
 
     attr_accessor :next_x, :next_y, :next_speed, :next_heading, :rotation, :accelerate, :target
 
@@ -126,7 +128,9 @@ module SakaUtil
         unless setup
           return false
         end
-        # debug_draw_point @to[:x], @to[:y], 1 * @owner.size, 0xff00ffff
+        if DEBUG
+          debug_draw_point @to[:x], @to[:y], 1 * @owner.size, 0xff00ffff
+        end
       end
       last_pos = {x: @owner.x, y: @owner.y}
       next_pos = nil
@@ -175,7 +179,7 @@ module SakaUtil
   class RandomMoveToTargetStrategy < MoveStrategyBase
     def initialize(owner, target)
       super
-      @max_direction = 45
+      @max_direction = 60
     end
 
     def calc_next
@@ -198,7 +202,7 @@ module SakaUtil
         @next_position = 0
         break if to_distance(@owner, @to) > (@max_distance / 2)
       end
-      # @position_converter = Bezier2PositionConverter.new(@from, @to)
+      @position_converter = Bezier2PositionConverter.new(@from, @to)
       true
     end
   end
@@ -231,7 +235,7 @@ module SakaUtil
         @next_position = 0
         break if to_distance(@owner, @to) > @owner.size
       end
-      # @position_converter = Bezier2PositionConverter.new(@from, @to)
+      @position_converter = Bezier2PositionConverter.new(@from, @to)
       true
     end
   end
