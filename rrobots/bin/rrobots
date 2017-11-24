@@ -62,7 +62,6 @@ def run_out_of_gui(battlefield)
     battlefield.tick
     $stderr.print "." if battlefield.time % (battlefield.timeout / 54).to_i == 0
   end
-  print_outcome(battlefield)
 end
 
 def setup_gui(xres, yres)
@@ -343,13 +342,9 @@ if options.gui
   battlefield = setup_battlefield(options, match[1], match[0])
   arena.set_battlefield(battlefield)
   game_over_counter = battlefield.teams.all?{|k,t| t.size < 2} ? 100 : 200
-  outcome_printed = false
   arena.on_game_over{|battlefield|
-    unless outcome_printed
-      print_outcome(battlefield)
-      outcome_printed = true
-    end
     if game_over_counter < 0
+      print_outcome(battlefield)
       print_battlefield_results battlefield, summary, options, match[0]
       match = matches.shift
       if match
@@ -367,6 +362,7 @@ else
   matches.each do |match|
     battlefield = setup_battlefield(options, match[1], match[0])
     run_out_of_gui(battlefield)
+    print_outcome(battlefield)
     print_battlefield_results battlefield, summary, options, match[0]
   end
 end
