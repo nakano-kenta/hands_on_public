@@ -159,7 +159,6 @@ module SampleUtil
       diff += 360 if diff < -180
       @turn_angle = [[@turn_angle, 10].min, -10].max
       turn_gun (diff - @turn_angle)
-      p "#{time}: #{gun_heat} #{diff - @turn_angle}"
       if (diff - @turn_angle).abs <= 30
         @will_fire = true
       end
