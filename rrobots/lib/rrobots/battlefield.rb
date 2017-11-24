@@ -129,6 +129,8 @@ class Battlefield
           if r1.team == r2.team
             r1.friend_ram_damage_given += damage
             r2.friend_ram_damage_given += damage
+            r1.friend_damage_given += damage
+            r2.friend_damage_given += damage
             if r2.dead
               r1.friend_kills += 1
               r1.friend_ram_kills += 1
@@ -140,6 +142,8 @@ class Battlefield
           else
             r1.ram_damage_given += damage
             r2.ram_damage_given += damage
+            r1.damage_given += damage
+            r2.damage_given += damage
             if r2.dead
               r1.kills += 1
               r1.ram_kills += 1

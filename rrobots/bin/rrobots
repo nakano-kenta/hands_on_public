@@ -43,6 +43,10 @@ class OptionsParser
         options.league = true
       end
 
+      opts.on_tail("--hero", "Hero mode") do
+        options.hero = true
+      end
+
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit
@@ -160,7 +164,7 @@ def _print_results(robot_results, summary = nil, with_score = false)
     robot_results.each do |robot_result|
       vertical_format lines[0], offset, "#{robot_result[:name]}:"
       vertical_format lines[1], offset, "    score:               #{'%.1f' % robot_result[:score]}"
-      vertical_format lines[2], offset, "    win:                 #{robot_result[:win]}"
+      vertical_format lines[2], offset, "    win:                 #{robot_result[:win]} / #{robot_result[:match]}"
       vertical_format lines[3], offset, "    kills:               #{robot_result[:kills]}"
       vertical_format lines[4], offset, "      (friend):          #{robot_result[:friend_kills]}"
       vertical_format lines[5], offset, "    damage_given:        #{'%.1f' % robot_result[:damage_given]}"
@@ -252,6 +256,7 @@ def print_battlefield_results(battlefield, summary, options, match_no)
   robot_results = {}
   battlefield.robots.each do |robot|
     result = {
+      match: 1,
       win: (!robot.dead ? 1 : 0),
       name: robot.uniq_name,
       kills: robot.kills,
@@ -329,6 +334,12 @@ matches = []
         match_no += 1
         matches << [match_no, [r1, r2]]
       end
+    end
+  elsif options.hero
+    r1 = robots.first
+    robots[1..-1].each_with_index do |r2|
+      match_no += 1
+      matches << [match_no, [r1, r2]]
     end
   else
     match_no += 1
