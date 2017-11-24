@@ -43,6 +43,9 @@ class AntiYamaguchi
       if target[:name] =~ /^Yamaguchi/
         shoot_uniform_speed 0.5
       elsif target[:name] =~ /^Watanabe/
+        @random_angle = (SecureRandom.random_number * 60 + 90) * (SecureRandom.random_number < 0.5 ? 1 : -1) if time % 25 == 0
+        shoot_uniform_speed 1
+      elsif target[:name] =~ /^Sekine/
         shoot_uniform_speed 1
       else
         shoot_uniform_speed 3
