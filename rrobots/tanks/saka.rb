@@ -1,6 +1,7 @@
 require 'rrobots'
 require "#{File.dirname(__FILE__)}/saka/utility"
 require "#{File.dirname(__FILE__)}/saka/history"
+require "#{File.dirname(__FILE__)}/saka/move"
 
 class Saka
   include Robot
@@ -11,6 +12,7 @@ class Saka
 
   def initialize
     @target_histories = {}
+    @move_strategy = nil
   end
 
   def [](key)
@@ -68,40 +70,17 @@ class Saka
     true
   end
   def move target_history
-    new_x = self.x
-    new_y = self.y
-    new_heading = self.heading
-    new_speed = self.speed
-
-    history = target_history.next 1
-    target_direction = to_direction(self, history)
-    desired_rotation = to_min_direction(target_direction - self.heading)
-    adjusted_rotation = desired_rotation
-    if adjusted_rotation.abs >= MAX_BODY_ROTATE
-      adjusted_rotation = adjusted_rotation > 0 ? MAX_BODY_ROTATE : -MAX_BODY_ROTATE
+    @move_strategy = SakaUtil::KamikazeMoveStrategy.new(self, target_history) if !@move_strategy or @move_strategy.target != target_history
+    if !@move_strategy.move
+      @move_strategy = SakaUtil::KamikazeMoveStrategy.new(self, target_history)
+      @move_strategy.move
     end
-    accel = 0
-    if desired_rotation.abs >= 90
-      accel = -1 if new_speed > 0
-    elsif desired_rotation.abs <= MAX_BODY_ROTATE * 2
-      accel = 1 if new_speed < MAX_SPEED
-    end
-    new_heading = self.heading + adjusted_rotation
-    new_speed = self.speed + accel
-
-
-    turn(adjusted_rotation)
-    accelerate accel if accel.abs > 0
-
-    new_heading = self.heading + adjusted_rotation
-    new_speed = self.speed + accel
-    new_x = Math::cos(new_heading.to_rad) * new_speed + self.x
-    new_y = -Math::sin(new_heading.to_rad) * new_speed + self.y
+    @move_strategy.apply
     {
-      x: new_x,
-      y: new_y,
-      speed: new_speed,
-      heading: new_heading,
+      x: @move_strategy.next_x,
+      y: @move_strategy.next_y,
+      speed: @move_strategy.next_speed,
+      heading: @move_strategy.next_heading,
       gun_heading: self.gun_heading,
       radar_heading: self.radar_heading
     }
