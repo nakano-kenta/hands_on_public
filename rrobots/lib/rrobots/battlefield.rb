@@ -89,14 +89,15 @@ class Battlefield
         if difference <= 80
           r1_heading = to_direction({x: r1.prev_x, y: r1.prev_y}, {x: r1.x, y: r1.y})
           r2_heading = to_direction({x: r2.prev_x, y: r2.prev_y}, {x: r2.x, y: r2.y})
-          r1_heading = r2.heading if r1.speed <= 0.1
-          r2_heading = r1.heading if r2.speed <= 0.1
+          r1_heading = r2.heading if r1.speed.abs <= 0.1
+          r2_heading = r1.heading if r2.speed.abs <= 0.1
           crash_angle = angle_to_direction(r1_heading - r2_heading)
           crash_heading = to_direction({x: r1.x, y: r1.y}, {x: r2.x, y: r2.y})
           r1_delta_angle = (crash_heading - r1_heading).to_rad
           r2_delta_angle = (crash_heading - r2_heading + 180).to_rad
           impact = Math.cos(r1_delta_angle)*r1.speed.abs + Math.cos(r2_delta_angle)*r2.speed.abs
           damage = impact_to_damage impact
+
           crash_move_distance = (80 - difference) / 2
           crash_move_distance += impact * ELASTIC_MODULUS / 2
 
