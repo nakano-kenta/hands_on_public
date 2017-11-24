@@ -7,7 +7,7 @@ class Explosion
 
   def initialize bf, x, y, e
     @x, @y, @t, @energy = x, y, 0, e
-    @battlefield, dead = bf, false
+    @battlefield, @dead = bf, false
   end
 
   def state
