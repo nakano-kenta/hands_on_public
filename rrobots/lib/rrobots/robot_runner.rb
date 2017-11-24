@@ -1,6 +1,7 @@
 require 'securerandom'
 
 class RobotRunner
+  include Coordinate
 
   STATE_IVARS = [ :x, :y, :gun_heat, :heading, :gun_heading, :radar_heading, :time, :size, :speed, :energy ]
   NUMERIC_ACTIONS = [ :fire, :turn, :turn_gun, :turn_radar, :accelerate]
@@ -249,24 +250,24 @@ class RobotRunner
           dy = -Math::sin(@heading.to_rad) * @speed
           other_dx = Math::cos(other.heading.to_rad) * other.speed
           other_dy = -Math::sin(other.heading.to_rad) * other.speed
-          @x = @prev_x + (dx + other_dx) / 4
-          @y = @prev_y + (dy + other_dy) / 4
+          # @x = @prev_x + (dx + other_dx) / 4
+          # @y = @prev_y + (dy + other_dy) / 4
 
           direction = to_direction({x: @prev_x, y: @prev_y}, {x: @x, y: @y})
-          @speed = Math.hypot(@prev_y - @y, @x - @prev_x) * Math.cos(diff_angle(direction, @heading) / 180 * Math::PI)
+          # @speed = Math.hypot(@prev_y - @y, @x - @prev_x) * Math.cos(diff_angle(direction, @heading) / 180 * Math::PI)
           after_move
 
-          other.x = other.prev_x + (dx + other_dx) / 4
-          other.y = other.prev_y + (dy + other_dy) / 4
+          # other.x = other.prev_x + (dx + other_dx) / 4
+          # other.y = other.prev_y + (dy + other_dy) / 4
 
           other_direction = to_direction({x: other.prev_x, y: other.prev_y}, {x: other.x, y: other.y})
 
-          other.speed = Math.hypot(other.prev_y - other.y, other.x - other.prev_x) * Math.cos(diff_angle(other_direction, other.heading) / 180 * Math::PI)
+          # other.speed = Math.hypot(other.prev_y - other.y, other.x - other.prev_x) * Math.cos(diff_angle(other_direction, other.heading) / 180 * Math::PI)
           other.after_move
           impact = Math.hypot(dy - other_dy, dx - other_dx)
           damage = impact_to_damage(impact)
-          @energy -= damage
-          other.energy -= damage
+          # @energy -= damage
+          # other.energy -= damage
           if @team == other.team
             @friend_ram_damage_given += damage
             other.friend_ram_damage_given += damage
@@ -410,16 +411,6 @@ class RobotRunner
         }
       end
     end
-  end
-
-  def to_angle(radian)
-    (radian * 180.0 / Math::PI + 360) % 360
-  end
-
-  def to_direction(a, b)
-    diff_x = a[:x] - b[:x]
-    diff_y = b[:y] - a[:y]
-    to_angle(Math.atan2(diff_y, diff_x) - Math::PI)
   end
 
   def scan
