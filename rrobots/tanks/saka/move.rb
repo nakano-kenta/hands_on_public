@@ -1,6 +1,7 @@
 require 'rrobots'
 require "#{File.dirname(__FILE__)}/utility"
 require "#{File.dirname(__FILE__)}/history"
+require 'securerandom'
 
 module SakaUtil
 
@@ -31,8 +32,37 @@ module SakaUtil
 
       @next_heading = @owner.heading + @rotation
       @next_speed = @owner.speed + @accelerate
-      @next_x = Math::cos(@next_heading.to_rad) * @next_speed + @owner.x
-      @next_y = -Math::sin(@next_heading.to_rad) * @next_speed + @owner.y
+      @next_x = calc_x(@next_heading, @next_speed)
+      @next_y = calc_y(@next_heading, @next_speed)
+    end
+
+    def calc_x(direction, speed)
+      Math::cos(direction.to_rad) * speed + @owner.x
+    end
+
+    def calc_y(direction, speed)
+      -Math::sin(direction.to_rad) * speed + @owner.y
+    end
+
+    def round_x(x)
+      padding = @owner.size / 2
+      if x < padding
+        @owner.size / 2
+      elsif x > (@owner.battlefield_width - padding)
+        @owner.battlefield_width - padding
+      else
+        x
+      end
+    end
+    def round_y(y)
+      padding = @owner.size / 2
+      if y < padding
+        @owner.size / 2
+      elsif y > (@owner.battlefield_height - padding)
+        @owner.battlefield_height - padding
+      else
+        y
+      end
     end
   end
 
@@ -52,6 +82,111 @@ module SakaUtil
         accel = 1 if @owner.speed < MAX_SPEED
       end
       finish adjusted_rotation, accel
+      true
+    end
+  end
+
+  class MoveStrategyBase < MoveStrategy
+    def initialize(owner, target)
+      super
+      @next_position = -1
+      @max_distance = owner.size * 4
+    end
+
+    def move
+      if @next_position < 0
+        unless setup
+          return false
+        end
+      end
+      last_pos = nil
+      loop do
+        pos = calc_next
+        break if !pos or to_distance(pos, @from) > @max_distance
+        last_pos = pos
+        @next_position += 1
+        break if to_distance(pos, @owner) > @owner.speed
+      end
+      unless last_pos
+        if finished
+          return move
+        else
+          return false
+        end
+      end
+
+      target_direction = to_direction(@owner, last_pos)
+      desired_rotation = to_min_direction(target_direction - @owner.heading)
+      adjusted_rotation = desired_rotation
+      if adjusted_rotation.abs >= MAX_BODY_ROTATE
+        adjusted_rotation = adjusted_rotation > 0 ? MAX_BODY_ROTATE : -MAX_BODY_ROTATE
+      end
+      accel = @owner.speed < MAX_SPEED ? 1 : 0
+      finish adjusted_rotation, accel
+      true
+    end
+
+    def finished
+      false
+    end
+  end
+
+  class RandomMoveToTargetStrategy < MoveStrategyBase
+    def initialize(owner, target)
+      super
+      @max_direction = 45
+    end
+
+    def calc_next
+      {
+        x: calc_x(@direction, @next_position),
+        y: calc_y(@direction, @next_position)
+      }
+    end
+
+    def setup
+      @from = {x: @owner.x, y: @owner.y}
+      10.times do
+        @direction = to_direction(@owner, @target.next(0))
+        @direction += (SecureRandom.random_number * 2 - 1.0) * @max_direction
+
+        to_x = round_x calc_x(@direction, @max_distance)
+        to_y = round_y calc_y(@direction, @max_distance)
+        @to = {x: to_x, y: to_y}
+        @next_position = 0
+        break if to_distance(@owner, @to) > (@max_distance / 2)
+      end
+      true
+    end
+  end
+
+
+  class RandomMoveStrategy < MoveStrategyBase
+    def initialize(owner)
+      super owner, nil
+    end
+    def calc_next
+      {
+        x: calc_x(@direction, @next_position),
+        y: calc_y(@direction, @next_position)
+      }
+    end
+
+    def finished
+      setup
+      true
+    end
+
+    def setup
+      @from = {x: @owner.x, y: @owner.y}
+      10.times do
+        to_x = round_x (SecureRandom.random_number * 2 - 1.0) * @owner.size * 4 + @owner.x
+        to_y = round_y (SecureRandom.random_number * 2 - 1.0) * @owner.size * 4 + @owner.y
+        @to = {x: to_x, y: to_y}
+        @direction = to_direction(@owner, @to)
+        @next_position = 0
+        break if to_distance(@owner, @to) > @owner.size
+      end
       true
     end
   end
