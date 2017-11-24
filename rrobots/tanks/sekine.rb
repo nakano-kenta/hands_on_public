@@ -5,6 +5,7 @@ class Sekine
 
   LOST_TICK = 30
   MAX_HISTORY_SIZE = 1000
+  MAX_BULLET_POWER = 3.0
   MAX_SPEED = 8
   NORMAL_SPEED = 4
   MAX_RADAR_TURN = 60.to_rad
@@ -22,9 +23,9 @@ class Sekine
   end
 
   def before_start
-    @enable_log = true
+    @enable_log = false
     @enable_debug_line = false
-    @enable_rador_line = true
+    @enable_rador_line = false
     @enable_tank_line = false
   end
 
@@ -38,6 +39,7 @@ class Sekine
     @direction = 1
     @emergency = 0
     @will_fire = 0
+    @bullet_power = 1.5
 
     term_frame
   end
@@ -95,7 +97,7 @@ class Sekine
     # TODO: exclude my shot!
     target_events = last_target_events(2)
     return false if target_events.nil? or target_events.size < 2
-    r = target_events[0][:energy] > target_events[1][:energy] and (@last_energy > energy and !@last_fired)
+    r = (target_events[0][:energy] - target_events[1][:energy]) > 2.0 and (@last_energy > energy and !@last_fired)
     log "enemy_shot?" if r
     r
   end
@@ -142,7 +144,8 @@ class Sekine
         end
         draw_point_rect(future_position)
         gun_direction = normalize_radian(to_direction(@current_position, future_position) - gun_heading.to_rad)
-        @will_fire = 3.0 if gun_direction.abs < 0.001
+
+        @will_fire = (distnace_to_enemy < NEALY_DISTANCE) ? MAX_BULLET_POWER : @bullet_power if gun_direction.abs < 0.001
       else
         # TODO: 
         # vectors = []
