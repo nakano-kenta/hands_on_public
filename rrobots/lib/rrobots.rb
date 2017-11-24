@@ -1,3 +1,4 @@
+require 'rrobots/coordinate'
 require 'rrobots/robot'
 require 'rrobots/bot'
 require 'rrobots/battlefield'
