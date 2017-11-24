@@ -3,7 +3,7 @@ require 'rrobots'
 class Sekine
   include Robot
 
-  LOST_TICK = 10
+  LOST_TICK = 30
   MAX_HISTORY_SIZE = 1000
   MAX_SPEED = 8
   NORMAL_SPEED = 4
@@ -11,8 +11,8 @@ class Sekine
   MAX_GUN_TURN  = 30.to_rad
   MAX_TURN = 10.to_rad
   BULLET_SPPED = 30
-  DEFAULT_KEEPED_DISTANCE = 500
-  NEALY_DISTANCE = 70
+  DEFAULT_KEEPED_DISTANCE = 600
+  NEALY_DISTANCE = 200
   WALL_DISTANCE_LIMIT = 0.3
   DEFAULT_TURN_TIME = 120
   EMERGENCY_TIME = 15
@@ -22,9 +22,9 @@ class Sekine
   end
 
   def before_start
-    @enable_log = false
+    @enable_log = true
     @enable_debug_line = false
-    @enable_rador_line = false
+    @enable_rador_line = true
     @enable_tank_line = false
   end
 
@@ -48,7 +48,7 @@ class Sekine
     @will_turn_radar = 0
 
     @current_position = position(x, y)
-    @emergency = EMERGENCY_TIME if @emergency <= 0 and enemy_shot?
+    @emergency = EMERGENCY_TIME if enemy_shot?
 
     unless events['robot_scanned'].empty?
       min_distance = nil
@@ -82,6 +82,7 @@ class Sekine
     @last_gun_heading = gun_heading
     @last_radar_heading = radar_heading
     @last_speed = speed
+    @last_energy = energy
   end
 
   def last_target_events(count = 1)
@@ -94,7 +95,9 @@ class Sekine
     # TODO: exclude my shot!
     target_events = last_target_events(2)
     return false if target_events.nil? or target_events.size < 2
-    target_events[0][:energy] < target_events[1][:energy]
+    r = target_events[0][:energy] > target_events[1][:energy] and (@last_energy > energy and !@last_fired)
+    log "enemy_shot?" if r
+    r
   end
 
   def search
@@ -139,7 +142,7 @@ class Sekine
         end
         draw_point_rect(future_position)
         gun_direction = normalize_radian(to_direction(@current_position, future_position) - gun_heading.to_rad)
-        @will_fire = 3.0 if gun_direction.abs < 0.01
+        @will_fire = 3.0 if gun_direction.abs < 0.001
       else
         # TODO: 
         # vectors = []
@@ -185,17 +188,20 @@ class Sekine
     if @next_turn_time <= time and @emergency <= 0
       head_direction
       @last_turn_time = time
-      @next_turn_time = time + DEFAULT_TURN_TIME
+      @next_turn_time = time + DEFAULT_TURN_TIME * (rand + 0.5)
+    elsif @emergency > 0
+#      head_direction
     end
 
     tick = time - @last_turn_time
     moved_ratio = tick.to_f / (@next_turn_time - @last_turn_time)
-    if moved_ratio < 0.5
+    if @emergency > 0
+      target_speed = MAX_SPEED
+    elsif moved_ratio < 0.5
       target_speed = [1, NORMAL_SPEED * moved_ratio * 2].max
     else
       target_speed = NORMAL_SPEED * (1.0 - moved_ratio) * 2
     end
-    target_speed = MAX_SPEED if @emergency > 0
     target_speed *= @direction
     accelerate(target_speed - speed)
 
@@ -220,11 +226,16 @@ class Sekine
   end
 
   def tick events
-    return if game_over
+    return if game_over or num_robots <= 1
     init if time == 0
     init_frame(events)
 
-    fire @will_fire if @will_fire > 0
+    if @will_fire > 0
+      fire @will_fire
+      @last_fired = true
+    else
+      @last_fired = false
+    end
 
     search
     aiming
