@@ -80,7 +80,7 @@ class Yamaguchi
       next if log.size < 10
       got_hit = events['got_hit'].select {|hit_log| hit_log[:from] == log[:name]}.first
       hit_bonus = got_hit[:damage] * 2/3 if got_hit
-      @duration += 10 if @duration - time < 20 and  (0.1..3).cover? @log_by_robo[log[:name]][-2][:energy] - log[:energy] + hit_bonus
+      @duration += 20 if @duration - time < 20 and  (0.1..3).cover? @log_by_robo[log[:name]][-2][:energy] - log[:energy] + hit_bonus
     end
     close_enemy = recent_logs.min_by { |log| log[:distance] }
     counter_angle = 90
