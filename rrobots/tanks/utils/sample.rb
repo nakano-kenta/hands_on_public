@@ -90,8 +90,13 @@ module SampleUtil
   end
 
   def scan_for_fire
-    @turn_radar_angle ||= 60
+    @scan_time ||= 0
     @scanned_by_name ||= {}
+    @turn_radar_angle ||= 60
+    if @scan_time == time
+      return @nearest
+    end
+    @scan_time = time
     events['robot_scanned'].each{|scanned|
       @scanned_by_name[scanned[:name]] ||= {}
       @scanned_by_name[scanned[:name]][:latest] = time
@@ -109,16 +114,16 @@ module SampleUtil
       scanned[:diff] = diff
     end
 
-    nearest = @scanned_by_name.values.compact.reject{|robot| team_members.include? robot[:name]}.min do |a, b|
+    @nearest = @scanned_by_name.values.compact.reject{|robot| team_members.include? robot[:name]}.min do |a, b|
       a[:diff] <=> b[:diff]
     end
 
-    if nearest and nearest[:latest] == time
+    if @nearest and @nearest[:latest] == time
       @turn_radar_angle *= -1
     end
     turn_radar @turn_radar_angle
 
-    nearest
+    @nearest
   end
 
   def advanced_shoot(&block)
@@ -135,7 +140,7 @@ module SampleUtil
           y: -Math.sin(radian) * nearest[:distance] + y
         }
         ticks = (nearest[:distance] / 30) - 1
-        if nearest[:point] and gun_heat == 0
+        if nearest[:point] and gun_heat <= 0.1
           block.call nearest, ticks, point
         end
         nearest[:point] = point
@@ -154,6 +159,7 @@ module SampleUtil
       diff += 360 if diff < -180
       @turn_angle = [[@turn_angle, 10].min, -10].max
       turn_gun (diff - @turn_angle)
+      p "#{time}: #{gun_heat} #{diff - @turn_angle}"
       if (diff - @turn_angle).abs <= 30
         @will_fire = true
       end
