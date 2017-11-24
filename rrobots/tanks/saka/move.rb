@@ -5,6 +5,34 @@ require 'securerandom'
 
 module SakaUtil
 
+  class PositionConverter
+    include SakaUtil::Utility
+    def convert(pos, ratio)
+      pos
+    end
+  end
+
+  class Bezier2PositionConverter < PositionConverter
+    def initialize(from, to)
+      @from = from
+      @to = to
+      @pos1 = {
+        x: SecureRandom.random_number,
+        y: SecureRandom.random_number
+      }
+    end
+    def convert(pos, ratio)
+      return pos if ratio <= 0 or ratio >= 1
+
+      ratio_x = 2*(1-ratio)*ratio*@pos1[:x] + ratio*ratio
+      ratio_y = 2*(1-ratio)*ratio*@pos1[:y] + ratio*ratio
+      {
+        x: (pos[:x] - @from[:x]) * (ratio_x / ratio) + @from[:x],
+        y: (pos[:x] - @from[:y]) * (ratio_y / ratio) + @from[:y]
+      }
+    end
+  end
+
   class MoveStrategy
     include SakaUtil::Utility
     include SakaUtil::Constants
@@ -98,16 +126,21 @@ module SakaUtil
         unless setup
           return false
         end
+        # debug_draw_point @to[:x], @to[:y], 1 * @owner.size, 0xff00ffff
       end
-      last_pos = nil
+      last_pos = {x: @owner.x, y: @owner.y}
+      next_pos = nil
+      moved = 0
       loop do
         pos = calc_next
         break if !pos or to_distance(pos, @from) > @max_distance
-        last_pos = pos
+        next_pos = pos
+        moved += to_distance(last_pos, next_pos)
+        last_pos = next_pos
         @next_position += 1
-        break if to_distance(pos, @owner) > @owner.speed
+        break if moved > @owner.speed
       end
-      unless last_pos
+      unless next_pos
         if finished
           return move
         else
@@ -115,7 +148,7 @@ module SakaUtil
         end
       end
 
-      target_direction = to_direction(@owner, last_pos)
+      target_direction = to_direction(@owner, next_pos)
       desired_rotation = to_min_direction(target_direction - @owner.heading)
       adjusted_rotation = desired_rotation
       if adjusted_rotation.abs >= MAX_BODY_ROTATE
@@ -129,19 +162,28 @@ module SakaUtil
     def finished
       false
     end
+
+    private
+    def convert_position(pos)
+      return pos if @position_converter.nil?
+      ratio = to_distance(@from, pos) / to_distance(@from, @to)
+      new_pos = @position_converter.convert(pos, ratio > 1 ? 1 : ratio)
+      new_pos
+    end
   end
 
   class RandomMoveToTargetStrategy < MoveStrategyBase
     def initialize(owner, target)
       super
-      @max_direction = 45
+      @max_direction = 30
     end
 
     def calc_next
-      {
+      pos = {
         x: calc_x(@direction, @next_position),
         y: calc_y(@direction, @next_position)
       }
+      convert_position(pos)
     end
 
     def setup
@@ -156,6 +198,7 @@ module SakaUtil
         @next_position = 0
         break if to_distance(@owner, @to) > (@max_distance / 2)
       end
+      # @position_converter = Bezier2PositionConverter.new(@from, @to)
       true
     end
   end
@@ -166,10 +209,11 @@ module SakaUtil
       super owner, nil
     end
     def calc_next
-      {
+      pos = {
         x: calc_x(@direction, @next_position),
         y: calc_y(@direction, @next_position)
       }
+      convert_position(pos)
     end
 
     def finished
@@ -187,6 +231,7 @@ module SakaUtil
         @next_position = 0
         break if to_distance(@owner, @to) > @owner.size
       end
+      # @position_converter = Bezier2PositionConverter.new(@from, @to)
       true
     end
   end
