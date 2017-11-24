@@ -185,6 +185,12 @@ class Saka
       possibility = [possibility * 2, 1].min
     end
     strength = possibility * MAX_FIRE
+    expected_heat = 0.5 + strength / 1.2
+    reminder = expected_heat - (expected_heat * 10).to_i * 0.1
+    if reminder > 0
+      # reminder = strength / 1.2
+      strength += (0.1 - reminder - 0.0000001) * 1.2
+    end
     fire strength
 
     if DEBUG_FIRE
