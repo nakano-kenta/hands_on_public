@@ -70,6 +70,10 @@ class Battlefield
     bullets.each{|bullet| bullet.tick}
 
     robots.each do |robot|
+      robot.send :before_tick unless robot.dead
+    end
+
+    robots.each do |robot|
       begin
         robot.send :internal_tick unless robot.dead
       rescue Exception => bang

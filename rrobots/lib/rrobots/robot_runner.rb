@@ -213,6 +213,10 @@ class RobotRunner
     end
   end
 
+  def before_tick
+    scan
+  end
+
   def internal_tick
     update_state
     robot_tick
@@ -224,7 +228,6 @@ class RobotRunner
   end
 
   def after_tick
-    scan
     team_message
     speak
     broadcast
