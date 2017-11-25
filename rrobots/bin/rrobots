@@ -153,6 +153,7 @@ robots = robots.map do |robot, index|
 end
 
 def vertical_format(line, offset, adding)
+  line.slice!(offset, line.length)
   (offset - line.length).times.map {' '}.join + adding
   line.concat (offset - line.length).times.map {' '}.join + adding
 end
@@ -251,7 +252,8 @@ def score(result)
   }
 end
 
-def print_battlefield_results(battlefield, summary, options, match_no)
+def print_battlefield_results(battlefield, summary, options, match_no, print = true)
+  return unless summary
   team_results = {}
   robot_results = {}
   battlefield.robots.each do |robot|
@@ -317,6 +319,7 @@ def print_battlefield_results(battlefield, summary, options, match_no)
       summary[team] = team_result.dup
     end
   end
+  return unless print
   if options.teams.length == 0
     print_results("=== Battile: #{match_no} ===", nil, robot_results.values, summary)
   else
@@ -325,21 +328,18 @@ def print_battlefield_results(battlefield, summary, options, match_no)
 end
 
 summary = {}
+summary_by_name = {}
+summary_by_key = {}
 match_no = 0
 matches = []
 (options.match || 1).times.each do
-  if options.league
+  if options.league or options.hero
     robots.each_with_index do |r1, index|
       robots[(index + 1)..-1].each_with_index do |r2|
         match_no += 1
         matches << [match_no, [r1, r2]]
       end
-    end
-  elsif options.hero
-    r1 = robots.first
-    robots[1..-1].each_with_index do |r2|
-      match_no += 1
-      matches << [match_no, [r1, r2]]
+      break if options.hero
     end
   else
     match_no += 1
@@ -375,7 +375,48 @@ else
     run_out_of_gui(battlefield)
     print_outcome(battlefield)
     print_battlefield_results battlefield, summary, options, match[0]
+    key = battlefield.robots.map(&:uniq_name).join '-'
+    summary_by_key[key] ||= {}
+    print_battlefield_results battlefield, summary_by_key[key], options, match[0], false
+    battlefield.robots.each do |robot|
+      summary_by_name[robot.uniq_name] ||= {}
+      summary_by_name[robot.uniq_name][(battlefield.robots.map(&:uniq_name) - [robot.uniq_name]).join] ||= summary_by_key[key]
+    end
   end
+end
+
+def print_league_result(summary_by_name)
+  offset = 0
+  robot_names = summary_by_name.keys
+  lines = Array.new(robot_names.length + 2){''}
+  vertical_format lines[0], offset, ""
+  vertical_format lines[1], offset, "------------------------"
+  robot_names.each_with_index do |name, index|
+    vertical_format lines[index + 2], offset, "#{name}"
+  end
+  offset += 20
+  summary_by_name.each do |name, summary_by_key|
+    vertical_format lines[0], offset, "| #{name}"
+    vertical_format lines[1], offset, "+-----------------------"
+    robot_names.each_with_index do |key, index|
+      summary = summary_by_key[key]
+      if summary
+        mark = if summary[key][:win] > summary[name][:win]
+                 'o'
+               elsif summary[key][:win] == summary[name][:win]
+                 '-'
+               else
+                 'x'
+               end
+        vertical_format lines[index+2], offset, "| #{mark}  #{summary[key][:win]} : #{summary[name][:win]}"
+      else
+        vertical_format lines[index+2], offset, "| **** "
+      end
+    end
+    offset += 20
+  end
+  puts lines.join "\n"
+  puts
 end
 
 if options.teams.length == 0
@@ -384,4 +425,7 @@ else
   print_results('=== Finally ===', summary.values.select{|a| a[:name].start_with? 'Team_'}.sort{|a, b| b[:score] <=> a[:score]}, summary, nil, true)
 end
 
+if options.league or options.hero
+  print_league_result(summary_by_name)
+end
 exit 0
