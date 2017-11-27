@@ -242,10 +242,6 @@ class Bao
     end
   end
 
-  def distance(a, b)
-    Math.hypot(a[:x] - b[:x], a[:y] - b[:y])
-  end
-
   def draw_line direction, color
     colors = {
       black: Gosu::Color.argb(0xff_000000),
@@ -257,7 +253,15 @@ class Bao
       yellow: Gosu::Color.argb(0xff_ffff00)
     }
     aiming_point = to_position direction, 2000
-    Gosu.draw_line(current_position[:x]/2,current_position[:y]/2,Gosu::Color.argb(0xff_ffffff),aiming_point[:x]/2,aiming_point[:y]/2,colors[color],1)
+    Gosu.draw_line(
+      current_position[:x]/2,
+      current_position[:y]/2,
+      colors[color],
+      aiming_point[:x]/2,
+      aiming_point[:y]/2,
+      colors[color],
+      1
+    )
   end
 
   def out_of_battle_field postion
@@ -284,8 +288,8 @@ class Bao
         Gosu.draw_rect(
           enemy_future_postion[:x]/2,
           enemy_future_postion[:y]/2,
-          10,
-          10,
+          3,
+          3,
           Gosu::Color.argb(0xff_ffffff),
           1)
 
@@ -295,7 +299,7 @@ class Bao
         #draw_line gun_heading, :green
         diff = degree_to_direction(direction_diff - gun_heading - @turn_tank_degree)
 
-        if (distance - (BULLET_SPPED * tick)).abs <= 30
+        if (distance - (BULLET_SPPED * tick)).abs <= 20
           #binding.pry
           #pp "~~~~~~~~~ self: #{current_position} enemy: #{enemy_future_postion}"
           #pp "----------tick: #{tick} diff: #{diff} dis: #{distance} dis-(b_s*tick) #{distance - (BULLET_SPPED * tick)}"
