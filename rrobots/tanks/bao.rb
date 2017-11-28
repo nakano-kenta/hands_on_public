@@ -44,6 +44,16 @@ class Bao
   MAX_ACCELERATE = 1
   BULLET_SPPED = 30
 
+  COLORS = {
+    black: Gosu::Color.argb(0xff_000000),
+    gray: Gosu::Color.argb(0xff_808080),
+    white: Gosu::Color.argb(0xff_ffffff),
+    red: Gosu::Color.argb(0xff_ff0000),
+    green: Gosu::Color.argb(0xff_00ff00),
+    blue: Gosu::Color.argb(0xff_0000ff),
+    yellow: Gosu::Color.argb(0xff_ffff00)
+  }
+
   def initialize
     @self_info = {}
     @enemy_info = {}
@@ -243,23 +253,14 @@ class Bao
   end
 
   def draw_line direction, color
-    colors = {
-      black: Gosu::Color.argb(0xff_000000),
-      gray: Gosu::Color.argb(0xff_808080),
-      white: Gosu::Color.argb(0xff_ffffff),
-      red: Gosu::Color.argb(0xff_ff0000),
-      green: Gosu::Color.argb(0xff_00ff00),
-      blue: Gosu::Color.argb(0xff_0000ff),
-      yellow: Gosu::Color.argb(0xff_ffff00)
-    }
     aiming_point = to_position direction, 2000
     Gosu.draw_line(
       current_position[:x]/2,
       current_position[:y]/2,
-      colors[color],
+      COLORS[color],
       aiming_point[:x]/2,
       aiming_point[:y]/2,
-      colors[color],
+      COLORS[color],
       1
     )
   end
@@ -290,7 +291,7 @@ class Bao
           enemy_future_postion[:y]/2,
           3,
           3,
-          Gosu::Color.argb(0xff_ffffff),
+          COLORS[:white],
           1)
 
         distance = distance(current_position, enemy_future_postion)
@@ -373,7 +374,7 @@ class Bao
 
   def open_fire
     special = ['Yamaguchi', 'Sekine', 'Watanabe']
-    if @enemy_info.first and ( special.any? { |user| @enemy_info.first[0].match(/#{user}/) } )
+    if @enemy_info.first and ( special.any? { |user| @enemy_info.first[0].match(/^#{user}/) } )
       fire 0.3
     else
       if @will_fire
