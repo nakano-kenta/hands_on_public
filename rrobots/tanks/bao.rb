@@ -1,6 +1,7 @@
 require 'rrobots'
 require 'securerandom'
 require "pp"
+require 'gosu'
 #require "pry"
 
   #  battlefield_height  #the height of the battlefield
@@ -286,13 +287,13 @@ class Bao
           break
         end
 
-        Gosu.draw_rect(
-          enemy_future_postion[:x]/2,
-          enemy_future_postion[:y]/2,
-          3,
-          3,
-          COLORS[:white],
-          1)
+        #Gosu.draw_rect(
+        #  enemy_future_postion[:x]/2,
+        #  enemy_future_postion[:y]/2,
+        #  3,
+        #  3,
+        #  COLORS[:white],
+        #  1)
 
         distance = distance(current_position, enemy_future_postion)
         direction_diff = to_direction(current_position, enemy_future_postion)
@@ -333,7 +334,7 @@ class Bao
     end
     pp "now gun_heading: #{gun_heading} next should be: #{gun_heading + @turn_gun_degree}"
 
-    draw_line gun_heading + @turn_gun_degree, :red
+    #draw_line gun_heading + @turn_gun_degree, :red
     turn_gun @turn_gun_degree
   end
 
@@ -373,7 +374,7 @@ class Bao
   end
 
   def open_fire
-    special = ['Yamaguchi', 'Sekine', 'Watanabe']
+    special = ['Yamaguchi', 'Watanabe']
     if @enemy_info.first and ( special.any? { |user| @enemy_info.first[0].match(/^#{user}/) } )
       fire 0.3
     else
