@@ -1,6 +1,7 @@
 require 'rrobots'
 require 'securerandom'
 require "pp"
+require 'gosu'
 #require "pry"
 
   #  battlefield_height  #the height of the battlefield
@@ -43,6 +44,16 @@ class Bao
   FIRE_MIN = 0.1
   MAX_ACCELERATE = 1
   BULLET_SPPED = 30
+
+  COLORS = {
+    black: Gosu::Color.argb(0xff_000000),
+    gray: Gosu::Color.argb(0xff_808080),
+    white: Gosu::Color.argb(0xff_ffffff),
+    red: Gosu::Color.argb(0xff_ff0000),
+    green: Gosu::Color.argb(0xff_00ff00),
+    blue: Gosu::Color.argb(0xff_0000ff),
+    yellow: Gosu::Color.argb(0xff_ffff00)
+  }
 
   def initialize
     @self_info = {}
@@ -242,22 +253,17 @@ class Bao
     end
   end
 
-  def distance(a, b)
-    Math.hypot(a[:x] - b[:x], a[:y] - b[:y])
-  end
-
   def draw_line direction, color
-    colors = {
-      black: Gosu::Color.argb(0xff_000000),
-      gray: Gosu::Color.argb(0xff_808080),
-      white: Gosu::Color.argb(0xff_ffffff),
-      red: Gosu::Color.argb(0xff_ff0000),
-      green: Gosu::Color.argb(0xff_00ff00),
-      blue: Gosu::Color.argb(0xff_0000ff),
-      yellow: Gosu::Color.argb(0xff_ffff00)
-    }
     aiming_point = to_position direction, 2000
-    Gosu.draw_line(current_position[:x]/2,current_position[:y]/2,Gosu::Color.argb(0xff_ffffff),aiming_point[:x]/2,aiming_point[:y]/2,colors[color],1)
+    Gosu.draw_line(
+      current_position[:x]/2,
+      current_position[:y]/2,
+      COLORS[color],
+      aiming_point[:x]/2,
+      aiming_point[:y]/2,
+      COLORS[color],
+      1
+    )
   end
 
   def out_of_battle_field postion
@@ -281,13 +287,13 @@ class Bao
           break
         end
 
-        Gosu.draw_rect(
-          enemy_future_postion[:x]/2,
-          enemy_future_postion[:y]/2,
-          10,
-          10,
-          Gosu::Color.argb(0xff_ffffff),
-          1)
+        #Gosu.draw_rect(
+        #  enemy_future_postion[:x]/2,
+        #  enemy_future_postion[:y]/2,
+        #  3,
+        #  3,
+        #  COLORS[:white],
+        #  1)
 
         distance = distance(current_position, enemy_future_postion)
         direction_diff = to_direction(current_position, enemy_future_postion)
@@ -295,7 +301,7 @@ class Bao
         #draw_line gun_heading, :green
         diff = degree_to_direction(direction_diff - gun_heading - @turn_tank_degree)
 
-        if (distance - (BULLET_SPPED * tick)).abs <= 30
+        if (distance - (BULLET_SPPED * tick)).abs <= 20
           #binding.pry
           #pp "~~~~~~~~~ self: #{current_position} enemy: #{enemy_future_postion}"
           #pp "----------tick: #{tick} diff: #{diff} dis: #{distance} dis-(b_s*tick) #{distance - (BULLET_SPPED * tick)}"
@@ -328,7 +334,7 @@ class Bao
     end
     pp "now gun_heading: #{gun_heading} next should be: #{gun_heading + @turn_gun_degree}"
 
-    draw_line gun_heading + @turn_gun_degree, :red
+    #draw_line gun_heading + @turn_gun_degree, :red
     turn_gun @turn_gun_degree
   end
 
@@ -368,8 +374,8 @@ class Bao
   end
 
   def open_fire
-    special = ['Yamaguchi', 'Sekine', 'Watanabe']
-    if @enemy_info.first and ( special.any? { |user| @enemy_info.first[0].match(/#{user}/) } )
+    special = ['Yamaguchi', 'Watanabe']
+    if @enemy_info.first and ( special.any? { |user| @enemy_info.first[0].match(/^#{user}/) } )
       fire 0.3
     else
       if @will_fire
