@@ -186,7 +186,7 @@ class Battlefield
     @time += 1
     sleep @slow if @slow.to_f > 0
     live_robots = robots.find_all{|robot| !robot.dead}
-    if bullets.length == 0 and live_robots.all?{|r| r.zonbi?}
+    if bullets.length == 0 and live_robots.length > 1 and live_robots.all?{|r| r.zonbi?}
       live_robots.each do |r|
         r.energy = 0
       end
