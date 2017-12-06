@@ -166,7 +166,8 @@ class KubotaAdvance < Kubota
   end
 
   def aim_types
-    [:direct, :straight_12, :straight_24, :accelerated, :pattern, :simple]
+    # [:direct, :straight_12, :straight_24, :accelerated, :pattern, :simple]
+    [:direct, :accelerated, :pattern, :simple]
   end
 
   def fire_with_logging_virtual_bullets(robot)

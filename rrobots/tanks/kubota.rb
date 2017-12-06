@@ -201,8 +201,8 @@ class Kubota
     draw_gun_heading
     draw_enemy_bullets
     draw_bullets
-    hit events['hit']
-    got_hit events['got_hit']
+    hit_log events['hit']
+    got_hit_log events['got_hit']
     eval_enemy_bullet events['robot_scanned']
     decide_move
     do_move
@@ -259,27 +259,29 @@ class Kubota
     end
   end
 
-  def hit(events)
+  def hit_log(events)
     events&.each do |hit|
       robot = @robots[hit[:to]]
-      robot[:hit] = hit[:damage]
+      robot[:damage] = hit[:damage]
       bullet = @bullets.min do |a, b|
         distance(a[:point], robot[:prospect_point]) <=> distance(b[:point], robot[:prospect_point])
       end
       debug_attack("Hit #{bullet ? bullet[:aim_type] : :unknown}")
+      aim_type = :unknown
       if bullet
         @bullets.reject!{|b| b == bullet}
         @team_messages << {
           e: :hit,
           time: bullet[:time]
         }
-        robot[:hit_logs] << {hit: 1, aim_type: bullet[:aim_type], time: time}
-        robot[:hit_logs] = robot[:hit_logs].last(NUM_HIT_LOGS)
+        aim_type = bullet[:aim_type]
       end
+      robot[:hit_logs] << {hit: 1, aim_type: aim_type, time: time, damage: hit[:damage]}
+      robot[:hit_logs] = robot[:hit_logs].last(NUM_HIT_LOGS)
     end
   end
 
-  def got_hit(events)
+  def got_hit_log(events)
     events&.each do |hit|
       robot = @robots[hit[:from]]
       break unless robot
@@ -806,7 +808,6 @@ class Kubota
     return unless @status == :lockon
     if @lockon_target and (time - @lockon_start) > 4
       power = (@lockon_target[:energy] + 0.1)/FIRE_POWR_RATIO
-      power = [power, 0.1].min if @lockon_target[:distance] > PASSIVE_DISTANCE
       highest_log = log_by_aim_type(@lockon_target, 100).values.max do |a, b|
         a[:ratio] <=> b[:ratio]
       end
@@ -823,6 +824,10 @@ class Kubota
         @lockon_target[:aim_type] = [:direct, :accelerated, :straight_12, :straight_24].shuffle.first
         power = [0.5, power].min
       end
+      if @lockon_target[:distance] > PASSIVE_DISTANCE and highest_log and (highest_log[:ratio] <= 0.33 or highest_log[:real_hit] < 1)
+        power = [power, 0.1].min
+      end
+
       if last_enemy?
         if @lockon_target[:energy] < DYING_ENERGY
           if @lockon_target[:distance] > SAFETY_DISTANCE
@@ -867,20 +872,22 @@ class Kubota
     end
   end
 
-  def log_by_aim_type(robot, n)
+  def log_by_aim_type(robot, ntime)
     return @log_by_aim_type_by_name[robot[:name]] if @log_by_aim_type_by_name and @log_by_aim_type_by_name[robot[:name]]
     @log_by_aim_type_by_name ||= {}
     log_by_aim_type = @log_by_aim_type_by_name[robot[:name]] ||= {}
     robot[:hit_logs].reverse.each do |hit_log|
-      break if time - hit_log[:time] > n
+      break if time < hit_log[:time] or time - hit_log[:time] > ntime
       log_by_aim_type[hit_log[:aim_type]] ||= {
         aim_type: hit_log[:aim_type],
         hit: 0,
-        miss: 0
+        miss: 0,
+        real_hit: 0,
       }
       log_by_aim_type[hit_log[:aim_type]][:hit] += hit_log[:hit].to_i
       log_by_aim_type[hit_log[:aim_type]][:miss] += hit_log[:miss].to_i
       log_by_aim_type[hit_log[:aim_type]][:ratio] = log_by_aim_type[hit_log[:aim_type]][:hit] / (log_by_aim_type[hit_log[:aim_type]][:hit] + log_by_aim_type[hit_log[:aim_type]][:miss]).to_f
+      log_by_aim_type[hit_log[:aim_type]][:real_hit] += hit_log[:hit].to_i if hit_log[:damage]
     end
     log_by_aim_type
   end
@@ -937,9 +944,9 @@ class Kubota
       robot = @robots[scanned[:name]]
       next unless robot and robot[:acceleration]
       next if robot[:team]
-      delta_energy = robot[:acceleration][:energy] + robot[:hit]
-      robot[:hit] = 0
-      if 0 > delta_energy and delta_energy >= -3
+      delta_energy = robot[:acceleration][:energy] + robot[:damage]
+      robot[:damage] = 0
+      if -0.00001 > delta_energy and delta_energy >= -3
         crash = @robots.values.reject{|other| robot == other}.any? do |other|
           r = distance(robot[:prospect_point], other[:prospect_point]) < @size * 2.2
         end
@@ -1025,10 +1032,13 @@ class Kubota
     context_by_bullet_type = {}
     recent_got_hits = []
     hit_count = 0
+    hit_times = []
     robot[:got_hit_logs].reverse.each do |got_hit_log|
-      hit_count += got_hit_log[:hit]
+      if hit_times.last != got_hit_log[:time] and got_hit_log[:hit] > 0
+        hit_times << got_hit_log[:time]
+        break if hit_times.length >= 3
+      end
       recent_got_hits << got_hit_log
-      break if hit_count >= 3
     end
     recent_got_hits.each do |got_hit_log|
       bullet_type = got_hit_log[:bullet_type]
@@ -1263,7 +1273,7 @@ class Kubota
       robot[:logs] = robot[:logs].last(NUM_LOGS)
       robot[:prev] = robot[:latest]
       robot[:latest] = scanned_time
-      robot[:hit] = 0
+      robot[:damage] = 0
     end
   end
 
