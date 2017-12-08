@@ -141,12 +141,37 @@ class Watanabe
       diff_direction = angle(present_point, target_last[:point]) - heading
       @turn_value    = adjust_direction(diff_direction)
     elsif @target_info.size >= 2 && was_shot?
-      @accelerate_value = -1
-    else
-      return if @run_duration - time > 0
-      @run_duration = rand(50..100)
-      @accelerate_value = [-1, -0.9, -0.8, -0.7, 0.7, 0.8, 0.9, 1].sample
+      @accelerate_value = [-1, 1].sample
+      diff_direction = angle(present_point, target_last[:point]) - heading
+      direction = adjust_direction(diff_direction)
+      if 90 > direction.abs
+        if direction > 0
+          @turn_value = MAX_TURN
+        else
+          @turn_value = -MAX_TURN
+        end
+      end
       @turn_value = [MAX_TURN, -MAX_TURN].sample
+    elsif @target_info.size >= 2
+      diff_direction = angle(present_point, target_last[:point]) - heading
+      direction = adjust_direction(diff_direction)
+      if 90 > direction.abs
+        if direction > 0
+          @turn_value = MAX_TURN
+        else
+          @turn_value = -MAX_TURN
+        end
+      end
+      @turn_value = [MAX_TURN, -MAX_TURN].sample
+    else
+      @accelerate_value = 1
+      @turn_value = [MAX_TURN, -MAX_TURN].sample
+    end
+
+    if @turn_value > MAX_TURN
+      @turn_value = MAX_TURN
+    elsif @turn_value < -MAX_TURN
+      @turn_value = -MAX_TURN
     end
   end
 
@@ -174,19 +199,33 @@ class Watanabe
       turn_gun -MAX_GUN_TURN
     else
       turn_gun diff_angle - @turn_value
-      @will_fire = (diff_angle - @turn_value).abs <= 10
+      @will_fire = true
     end
   end
 
   def attack
+    if !@target_info.empty? && @target_info.last[:energy] < 0.5
+      @accelerate_value = 1
+      diff_direction = angle(present_point, target_last[:point]) - heading
+      @turn_value    = adjust_direction(diff_direction)
+      @will_fire = false
+    end
+
     if @will_fire
-      fire 3
+      if @target_info.last[:distance] < 500
+        fire 3
+      elsif @target_info.last[:distance] > 500 && @target_info.last[:distance] < 1000
+        fire 2
+      else
+        fire 0.3
+      end
+
       @will_fire = false
     end
   end
 
   def tick(events)
-    return if game_over
+    return if num_robots == 1
     reset
     search_target
     set_aim
